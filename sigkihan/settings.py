@@ -76,9 +76,11 @@ SPECTACULAR_SETTINGS = {
 }
 
 CORS_ALLOWED_ORIGINS = [
-    origin for origin in os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
+    origin.strip() for origin in config('CORS_ALLOWED_ORIGINS', '').split(',')
     if origin.strip()
 ]
+
+CORS_ALLOW_CREDENTIALS = True
 
 ROOT_URLCONF = 'sigkihan.urls'
 
@@ -199,3 +201,8 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+KAKAO_CLIENT_ID = config('KAKAO_CLIENT_ID')
+KAKAO_REDIRECT_URI = config('KAKAO_REDIRECT_URI')
+KAKAO_TOKEN_URL = config('KAKAO_TOKEN_URL')
+KAKAO_USER_INFO_URL = config('KAKAO_USER_INFO_URL')

@@ -27,7 +27,7 @@ urlpatterns = [
     # Swagger UI
     path('swagger/', SpectacularSwaggerView.as_view(), name='swagger-ui'),
     path("redoc", SpectacularRedocView.as_view(), name="redoc"),
-    path('oauth/', include('users.urls')),
+    path('users/', include('users.urls')),
     # path('api/groups/', include('groups.urls')),
     # path('api/refrigerators/', include('refrigerators.urls')),
     # path('api/invitations/', include('invitations.urls')),

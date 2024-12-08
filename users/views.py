@@ -1,4 +1,5 @@
 import requests
+import os
 
 from decouple import config
 from rest_framework import status
@@ -9,6 +10,7 @@ from django.shortcuts import render, redirect
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema
+from django.conf import settings
 
 from .serializers import KakaoLoginRequestSerializer, KakaoLoginResponseSerializer
 
@@ -40,26 +42,38 @@ class KakaoLoginView(APIView):
 
         # Access Token 요청
         token_response = requests.post(
-            config('KAKAO_TOKEN_URL'),
+            settings.KAKAO_TOKEN_URL,
             data={
                 'grant_type': 'authorization_code',
-                'client_id': config('KAKAO_CLIENT_ID'),
-                'redirect_uri': config('KAKAO_REDIRECT_URI'),
+                'client_id': settings.KAKAO_CLIENT_ID,
+                'redirect_uri': settings.KAKAO_REDIRECT_URI,
                 'code': code,
             }
         )
         if token_response.status_code != 200:
-            return Response({"error": "Failed to fetch access token"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "error": "Failed to fetch access token",
+                    "details": token_response.json(),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        access_token = token_response.json().get('access_token')
+        token = token_response.json().get('access_token')
 
         # 사용자 정보 요청
         user_info_response = requests.get(
-            config('KAKAO_USER_INFO_URL'),
-            headers={'Authorization': f'Bearer {access_token}'}
+            settings.KAKAO_USER_INFO_URL,
+            headers={'Authorization': f'Bearer {token}'}
         )
         if user_info_response.status_code != 200:
-            return Response({"error": "Failed to fetch user info"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "error": "Failed to fetch user info",
+                    "details": user_info_response.json(),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         user_info = user_info_response.json()
         kakao_id = user_info.get('id')
