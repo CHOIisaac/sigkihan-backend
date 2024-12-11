@@ -6,7 +6,7 @@ from refriges.models import RefrigeratorAccess, Refrigerator
 from refriges.serializers import RefrigeratorSerializer
 
 
-class RefrigeratorListView(APIView):
+class RefrigeratorView(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = RefrigeratorSerializer
 

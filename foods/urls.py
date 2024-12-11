@@ -14,10 +14,12 @@ class NoSlashRouter(DefaultRouter):
 
 
 router = NoSlashRouter()
-router.register(r'foods/fridge', FridgeFoodViewSet, basename='fridge-food')
+router.register(r'refrigerators/<int:refrigerator_id>/foods', FridgeFoodViewSet, basename='fridge-food')
 
 
 urlpatterns = [
     path('foods/default', DefaultFoodListView.as_view(), name='default-food-list'),
-    path('foods/fridge/<int:food_id>/history', FoodHistoryView.as_view(), name='food-history'),
+    path('refrigerators/<int:refrigerator_id>/foods', FridgeFoodViewSet.as_view({'get': 'list', 'post': 'create'}), name='fridge-food-list'),
+    path('refrigerators/<int:refrigerator_id>/foods/<int:id>', FridgeFoodViewSet.as_view({'patch': 'partial_update', 'delete': 'destroy'}), name='fridge-food-detail'),
+    # path('foods/fridge/<int:food_id>/history', FoodHistoryView.as_view(), name='food-history'),
 ] + router.urls

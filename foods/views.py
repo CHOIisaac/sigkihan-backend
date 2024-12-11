@@ -32,25 +32,30 @@ class FridgeFoodViewSet(viewsets.ViewSet):
     냉장고 음식 관련 API ViewSet
     """
     permission_classes = [IsAuthenticated]
-    lookup_field = "id"
+    # lookup_field = "id"
 
     @extend_schema(
         summary="내 냉장고 음식 리스트",
         description="사용자의 냉장고에 추가된 모든 음식을 조회합니다.",
         responses={200: FridgeFoodSerializer(many=True)}
     )
-    def list(self, request):
+    def list(self, request, refrigerator_id=None):
         """
-        냉장고 음식 리스트 조회
+        특정 냉장고의 음식 리스트 조회
         """
-        print(request.user.id)
-        refrigerator_access = RefrigeratorAccess.objects.filter(user=request.user)
-        refrigerators = [access.refrigerator for access in refrigerator_access]
+        if not refrigerator_id:
+            return Response({"error": "Refrigerator ID is required."}, status=400)
 
-        if not refrigerators:
-            return Response({"message": "No refrigerators found for the user."}, status=404)
+        # 사용자가 접근 가능한 냉장고 확인
+        refrigerator_access = RefrigeratorAccess.objects.filter(user=request.user, refrigerator_id=refrigerator_id).first()
+        if not refrigerator_access:
+            return Response({"error": "You do not have access to this refrigerator."}, status=403)
 
-        fridge_foods = FridgeFood.objects.filter(refrigerator__in=refrigerators).order_by('expiration_date')
+        # 냉장고 음식 조회
+        fridge_foods = FridgeFood.objects.filter(refrigerator_id=refrigerator_id).order_by('expiration_date')
+        if not fridge_foods.exists():
+            return Response({"message": "No foods found in this refrigerator."}, status=404)
+
         serializer = FridgeFoodSerializer(fridge_foods, many=True)
         return Response(serializer.data, status=200)
 
@@ -131,11 +136,11 @@ class FridgeFoodViewSet(viewsets.ViewSet):
         },
         responses={200: FridgeFoodSerializer, 404: {"description": "음식 또는 냉장고를 찾을 수 없습니다."}}
     )
-    def partial_update(self, request, id=None):
+    def partial_update(self, request, refrigerator_id=None, id=None):
         """
         냉장고 음식 수정
         """
-        food = FridgeFood.objects.filter(id=id).first()
+        food = FridgeFood.objects.filter(refrigerator_id=refrigerator_id, id=id).first()
         if not food:
             return Response({"error": "Food not found."}, status=404)
 
@@ -169,8 +174,8 @@ class FridgeFoodViewSet(viewsets.ViewSet):
             404: {"description": "음식 또는 냉장고를 찾을 수 없습니다."}
         }
     )
-    def destroy(self, request, id=None):
-        food = FridgeFood.objects.filter(id=id).first()
+    def destroy(self, request, refrigerator_id=None, id=None):
+        food = FridgeFood.objects.filter(refrigerator_id=refrigerator_id, id=id).first()
         if not food:
             return Response({"error": "Food not found."}, status=404)
         food.delete()

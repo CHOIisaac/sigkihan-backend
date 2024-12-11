@@ -19,17 +19,15 @@ class RefrigeratorSerializer(serializers.ModelSerializer):
             'email': owner.user.email,
             'name': owner.user.name
         } if owner else None
-        pass
 
     def get_member(self, obj) -> list[str]:
-        # members = obj.access_list.filter(role='member')
-        # return [
-        #     {
-        #         'id': members.user.id,
-        #         'email': members.user.email,
-        #         'name': members.user.name
-        #     }
-        #     for member in members
-        # ]
-        pass
+        members = obj.access_list.filter(role='member')
+        return [
+            {
+                'id': members.user.id,
+                'email': members.user.email,
+                'name': members.user.name
+            }
+            for member in members
+        ]
 
