@@ -44,6 +44,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'users',
+    'refriges',
+    'foods',
 ]
 
 
@@ -73,6 +75,28 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'API documentation for 식기한 냉장고',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,  # Schema를 API 엔드포인트로 제공하지 않음
+
+    'SECURITY': [
+            {
+                "BearerAuth": {
+                    "type": "http",
+                    "scheme": "bearer",
+                    "bearerFormat": "JWT",
+                }
+            }
+        ],
+
+}
+
+SWAGGER_SETTINGS = {
+    'USE_SESSION_AUTH': False,  # 세션 인증 비활성화
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header',
+        },
+    },
 }
 
 CORS_ALLOWED_ORIGINS = [
@@ -80,7 +104,7 @@ CORS_ALLOWED_ORIGINS = [
     if origin.strip()
 ]
 
-CORS_ALLOW_CREDENTIALS = True
+# CORS_ALLOW_CREDENTIALS = True
 
 ROOT_URLCONF = 'sigkihan.urls'
 
@@ -138,7 +162,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
+    "ACCESS_TOKEN_LIFETIME": timedelta(hours=1),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
     "ROTATE_REFRESH_TOKENS": False,
     "BLACKLIST_AFTER_ROTATION": False,
@@ -196,6 +220,9 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field

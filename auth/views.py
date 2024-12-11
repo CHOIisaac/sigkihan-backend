@@ -2,7 +2,9 @@ import requests
 import logging, os
 
 from decouple import config
+from django.contrib.auth import authenticate
 from rest_framework import status
+from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.shortcuts import render, redirect
 from rest_framework.views import APIView
@@ -10,6 +12,7 @@ from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema
 from django.conf import settings
 
+from refriges.models import Refrigerator, RefrigeratorAccess
 from users.models import CustomUser
 from .serializers import KakaoLoginRequestSerializer, KakaoLoginResponseSerializer
 
@@ -124,12 +127,23 @@ class KakaoLoginView(APIView):
             # 사용자 저장 또는 가져오기
             user, created = CustomUser.objects.get_or_create(
                 kakao_id=kakao_id,
-                defaults={'email': email, 'name': nickname, 'profile_image': profile_image, 'is_social': True}
+                defaults={'email': email, 'name': nickname, 'is_social': True}
             )
             if created:
-                logger.info(f"New user created: {user.username}")
+                logger.info(f"New user created: {user.name}")
+                # 새 유저일 경우 기본 냉장고 생성
+                refrigerator = Refrigerator.objects.create(
+                    name=f"{nickname}의 냉장고",
+                    description=""
+                )
+                RefrigeratorAccess.objects.create(
+                    user=user,
+                    refrigerator=refrigerator,
+                    role='owner'
+                )
+                logger.info(f"Default refrigerator created for user: {refrigerator.name}")
             else:
-                logger.info(f"Existing user retrieved: {user.username}")
+                logger.info(f"Existing user retrieved: {user.name}")
 
             # JWT 발급
             logger.info("Generating JWT tokens")
@@ -140,8 +154,7 @@ class KakaoLoginView(APIView):
                 "user": {
                     "id": user.id,
                     "email": user.email,
-                    "username": user.username,
-                    "profile_image": user.profile_image.url if user.profile_image else None,
+                    "username": user.name,
                 },
             }, status=status.HTTP_200_OK)
         except Exception as e:
@@ -152,21 +165,46 @@ class KakaoLoginView(APIView):
             )
 
 
+class SuperUserLoginView(APIView):
+    """
+    슈퍼유저 로그인 및 JWT 발급
+    """
+    permission_classes = [AllowAny]
 
-class KakaoLoginRedirectView(APIView):
     @extend_schema(
-        summary="카카오 로그인 페이지로 리다이렉트",
-        description=(
-            "카카오 로그인을 위해 사용자에게 카카오 로그인 페이지로 리다이렉트합니다. "
-            "리다이렉트 완료 후, 설정된 `KAKAO_REDIRECT_URI`로 인가 코드가 반환됩니다."
-        ),
-        responses={302: "카카오 로그인 페이지로 리다이렉트"}
+        summary="슈퍼유저 로그인",
+        description="슈퍼유저 이메일과 비밀번호를 입력하여 JWT를 발급받습니다.",
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {
+                    "email": {"type": "string", "example": "admin3@admin.com"},
+                    "password": {"type": "string", "example": "admin3"},
+                },
+                "required": ["email", "password"]
+            }
+        },
+        responses={
+            200: {
+                "type": "object",
+                "properties": {
+                    "access": {"type": "string", "description": "Access Token"},
+                    "refresh": {"type": "string", "description": "Refresh Token"},
+                },
+            },
+            401: {"description": "인증 실패"},
+        },
     )
-    def get(self, request):
-        kakao_login_url = (
-            f"https://kauth.kakao.com/oauth/authorize?"
-            f"client_id={config('KAKAO_CLIENT_ID')}&"
-            f"redirect_uri={config('KAKAO_REDIRECT_URI')}&"
-            f"response_type=code"
-        )
-        return redirect(kakao_login_url)
+    def post(self, request):
+        email = request.data.get('email')
+        password = request.data.get('password')
+
+        user = authenticate(request, username=email, password=password)
+        if user and user.is_superuser:
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+            }, status=status.HTTP_200_OK)
+
+        return Response({"error": "Invalid credentials or not a superuser."}, status=status.HTTP_401_UNAUTHORIZED)
