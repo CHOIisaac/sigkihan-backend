@@ -121,7 +121,6 @@ class KakaoLoginView(APIView):
             kakao_id = user_info.get('id')
             email = user_info.get('kakao_account', {}).get('email')
             nickname = user_info.get('properties', {}).get('nickname')
-            profile_image = user_info.get('properties', {}).get('profile_image')
 
             logger.info("Attempting to create or retrieve user")
             # 사용자 저장 또는 가져오기
@@ -145,6 +144,9 @@ class KakaoLoginView(APIView):
             else:
                 logger.info(f"Existing user retrieved: {user.name}")
 
+            user_refrigerator = RefrigeratorAccess.objects.filter(user=user, role='owner').first()
+            refrigerator_id = user_refrigerator.refrigerator.id if user_refrigerator else None
+
             # JWT 발급
             logger.info("Generating JWT tokens")
             refresh = RefreshToken.for_user(user)
@@ -155,6 +157,12 @@ class KakaoLoginView(APIView):
                     "id": user.id,
                     "email": user.email,
                     "username": user.name,
+                    "refrigerator_id": refrigerator_id,
+                    "profile_image": {
+                        'id': user.image.id,
+                        'name': user.image.name,
+                        'image_url': user.image.image,
+                    },
                 },
             }, status=status.HTTP_200_OK)
         except Exception as e:
