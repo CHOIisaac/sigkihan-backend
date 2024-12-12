@@ -150,7 +150,7 @@ class KakaoLoginView(APIView):
             # JWT 발급
             logger.info("Generating JWT tokens")
             refresh = RefreshToken.for_user(user)
-            return Response({
+            response_data = {
                 "refresh": str(refresh),
                 "access": str(refresh.access_token),
                 "user": {
@@ -159,12 +159,14 @@ class KakaoLoginView(APIView):
                     "username": user.name,
                     "refrigerator_id": refrigerator_id,
                     "profile_image": {
-                        'id': user.image.id,
-                        'name': user.image.name,
-                        'image_url': user.image.image,
+                        'id': user.image.id if user.image else None,
+                        'name': user.image.name if user.image else None,
+                        'image_url': user.image.image.url if user.image and user.image.image else None,
                     },
                 },
-            }, status=status.HTTP_200_OK)
+            }
+            logger.info(f"Response data: {response_data}")
+            return Response(response_data, status=status.HTTP_200_OK)
         except Exception as e:
             logger.critical(f"Unexpected error during user creation or token generation: {str(e)}")
             return Response(
