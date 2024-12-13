@@ -21,5 +21,5 @@ urlpatterns = [
     path('default-foods', DefaultFoodListView.as_view(), name='default-food-list'),
     path('refrigerators/<int:refrigerator_id>/foods', FridgeFoodViewSet.as_view({'get': 'list', 'post': 'create'}), name='fridge-food-list'),
     path('refrigerators/<int:refrigerator_id>/foods/<int:id>', FridgeFoodViewSet.as_view({'patch': 'partial_update', 'delete': 'destroy'}), name='fridge-food-detail'),
-    # path('foods/fridge/<int:food_id>/history', FoodHistoryView.as_view(), name='food-history'),
+    path('refrigerators/<int:refrigerator_id>/foods/<int:id>/history', FoodHistoryView.as_view(), name='food-history'),
 ] + router.urls

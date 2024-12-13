@@ -5,6 +5,7 @@ from django.db import models
 class DefaultFood(models.Model):
     name = models.CharField(max_length=100, unique=True, verbose_name='기본 식품 이름')
     image = models.ImageField(upload_to='food_images/', verbose_name='기본 식품 이미지')
+    comment = models.TextField(null=True, blank=True, verbose_name='기본 식품 알림멘트')
 
     def __str__(self):
         return self.name
@@ -43,8 +44,10 @@ class FoodHistory(models.Model):
     ]
 
     fridge_food = models.ForeignKey(
-        FridgeFood, on_delete=models.CASCADE, related_name='food_histories', verbose_name='냉장고 식품'
+        FridgeFood, on_delete=models.SET_NULL, null=True,
+        blank=True, related_name='food_histories', verbose_name='냉장고 식품 ID'
     )
+    food_name = models.CharField(null=True, blank=True, max_length=100, verbose_name="음식 이름")
     user = models.ForeignKey(
         'users.CustomUser', on_delete=models.CASCADE, related_name='food_histories', verbose_name='사용자'
     )

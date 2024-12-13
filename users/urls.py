@@ -15,7 +15,7 @@ class NoSlashRouter(DefaultRouter):
 
 router = NoSlashRouter()
 
-router.register(r'users/profile-images', ProfileImageViewSet, basename='profile-image')
+# router.register(r'users/profile-images', ProfileImageViewSet, basename='profile-image')
 
 
 urlpatterns = [

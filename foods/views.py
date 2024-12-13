@@ -1,3 +1,4 @@
+from django.http import Http404
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiParameter
 from rest_framework.generics import ListAPIView, UpdateAPIView
@@ -66,7 +67,6 @@ class FridgeFoodViewSet(viewsets.ViewSet):
             "application/json": {
                 "type": "object",
                 "properties": {
-                    "refrigerator_id": {"type": "integer", "example": 1, "description": "냉장고 ID"},
                     "default_food_id": {"type": "integer", "example": 1, "description": "디폴트 음식 ID"},
                     "name": {"type": "string", "example": "수박", "description": "사용자 정의 음식 이름"},
                     "purchase_date": {"type": "string", "format": "date", "example": "2024-12-01", "description": "구매 날짜"},
@@ -78,11 +78,10 @@ class FridgeFoodViewSet(viewsets.ViewSet):
         },
         responses={201: FridgeFoodSerializer, 400: {"description": "잘못된 요청"}}
     )
-    def create(self, request):
+    def create(self, request, refrigerator_id):
         """
         음식 추가
         """
-        refrigerator_id = request.data.get('refrigerator_id')
         default_food_id = request.data.get('default_food_id')
         name = request.data.get('name')
         purchase_date = request.data.get('purchase_date')
@@ -103,6 +102,7 @@ class FridgeFoodViewSet(viewsets.ViewSet):
 
             food = FridgeFood.objects.create(
                 refrigerator=refrigerator,
+                name=name,
                 default_food=default_food,
                 purchase_date=purchase_date,
                 expiration_date=expiration_date,
@@ -211,14 +211,18 @@ class FoodHistoryView(APIView):
             404: {"description": "음식을 찾을 수 없습니다."}
         },
     )
-    def post(self, request, food_id):
+    def post(self, request, id, refrigerator_id):
         action = request.data.get('action')
         quantity = request.data.get('quantity')
 
         if not action or not quantity:
             return Response({"error": "Action and quantity are required."}, status=400)
 
-        fridge_food = get_object_or_404(FridgeFood, id=food_id)
+            # 특정 냉장고에 속하는지 확인
+        try:
+            fridge_food = FridgeFood.objects.get(id=id, refrigerator_id=refrigerator_id)
+        except FridgeFood.DoesNotExist:
+            raise Http404("Food not found in the specified refrigerator.")
 
         if action in ['consumed', 'discarded']:
             if fridge_food.quantity < quantity:
@@ -232,11 +236,12 @@ class FoodHistoryView(APIView):
                 fridge_food.save()
 
             FoodHistory.objects.create(
-                fridge_food=fridge_food,
+                food_name=fridge_food.name or fridge_food.default_food,
                 user=request.user,
                 action=action,
                 quantity=quantity
             )
+
             return Response({
                 "message": f"{action.capitalize()} recorded successfully.",
                 "remaining_quantity": fridge_food.quantity
@@ -244,33 +249,34 @@ class FoodHistoryView(APIView):
 
         return Response({"error": "Invalid action."}, status=400)
 
-    @extend_schema(
-        summary="특정 음식에 대한 히스토리 조회",
-        description="냉장고의 특정 음식에 대한 소비 및 폐기 기록을 조회합니다.",
-        responses={
-            200: {
-                "description": "히스토리 조회 성공",
-                "content": {
-                    "application/json": {
-                        "example": [
-                            {"action": "consumed", "quantity": 2, "timestamp": "2024-12-11T08:00:00Z"},
-                            {"action": "discarded", "quantity": 1, "timestamp": "2024-12-12T09:00:00Z"}
-                        ]
-                    }
-                }
-            },
-            404: {"description": "음식을 찾을 수 없습니다."}
-        },
-    )
-    def get(self, request, food_id):
-        fridge_food = get_object_or_404(FridgeFood, id=food_id)
-        histories = fridge_food.food_histories.all()
-        data = [
-            {
-                "action": history.action,
-                "quantity": history.quantity,
-                "timestamp": history.timestamp,
-            }
-            for history in histories
-        ]
-        return Response(data, status=200)
+    # @extend_schema(
+    #     summary="특정 음식에 대한 히스토리 조회",
+    #     description="냉장고의 특정 음식에 대한 소비 및 폐기 기록을 조회합니다.",
+    #     responses={
+    #         200: {
+    #             "description": "히스토리 조회 성공",
+    #             "content": {
+    #                 "application/json": {
+    #                     "example": [
+    #                         {"action": "consumed", "quantity": 2, "timestamp": "2024-12-11T08:00:00Z"},
+    #                         {"action": "discarded", "quantity": 1, "timestamp": "2024-12-12T09:00:00Z"}
+    #                     ]
+    #                 }
+    #             }
+    #         },
+    #         404: {"description": "음식을 찾을 수 없습니다."}
+    #     },
+    # )
+    # def get(self, request, id, refrigerator_id):
+    #     fridge_food = get_object_or_404(FridgeFood, id=id, refrigerator_id=refrigerator_id)
+    #     print(fridge_food)
+    #     histories = fridge_food.food_histories.all()
+    #     data = [
+    #         {
+    #             "action": history.action,
+    #             "quantity": history.quantity,
+    #             "timestamp": history.timestamp,
+    #         }
+    #         for history in histories
+    #     ]
+    #     return Response(data, status=200)
