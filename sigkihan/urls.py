@@ -30,6 +30,7 @@ urlpatterns = [
     path('api/', include('users.urls')),
     path('api/refrigerators/', include('refriges.urls')),
     path('api/', include('foods.urls')),
+    path('api/refrigerators/', include('notifications.urls')),
     path('auth/', include('auth.urls')),
     # path('api/groups/', include('groups.urls')),
     # path('api/refriges/', include('refriges.urls')),

@@ -15,17 +15,48 @@ from .serializers import DefaultFoodSerializer, FridgeFoodSerializer
 @extend_schema(
     summary="디폴트 음식 조회",
     description="디폴트 음식 목록을 조회하거나 검색합니다. 검색어를 포함하지 않으면 모든 음식을 반환합니다.",
-    responses={200: DefaultFoodSerializer(many=True)}
+    responses={
+        200: {
+            "description": "디폴트 음식 목록과 직접 추가하기 이미지 경로",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "default_foods": [
+                            {"id": 1, "name": "사과", "image": "/media/food_images/apple.png"},
+                            {"id": 2, "name": "바나나", "image": "/media/food_images/banana.png"}
+                        ],
+                        "direct_add_image": "http://your-domain.com/media/default_add_image.svg"
+                    }
+                }
+            }
+        }
+    }
 )
 class DefaultFoodListView(ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = DefaultFoodSerializer
 
-    def get_queryset(self):
+
+    def get(self, request, *args, **kwargs):
         query = self.request.GET.get('q', '').strip()
+
         if len(query) >= 1:
-            return DefaultFood.objects.filter(name__icontains=query)
-        return DefaultFood.objects.all()
+            default_foods = DefaultFood.objects.filter(name__icontains=query)
+        else:
+            default_foods = DefaultFood.objects.all()
+
+        serializer = self.get_serializer(default_foods, many=True)
+
+        # "직접 추가하기" 이미지 URL 생성
+        direct_add_image = request.build_absolute_uri('/media/food_images/other.svg')
+
+        # 응답 데이터 구성
+        response_data = {
+            "default_foods": serializer.data,
+            "direct_add_image": direct_add_image
+        }
+
+        return Response(response_data, status=200)
 
 
 class FridgeFoodViewSet(viewsets.ViewSet):
@@ -57,7 +88,7 @@ class FridgeFoodViewSet(viewsets.ViewSet):
         if not fridge_foods.exists():
             return Response({"message": "No foods found in this refrigerator."}, status=404)
 
-        serializer = FridgeFoodSerializer(fridge_foods, many=True)
+        serializer = FridgeFoodSerializer(fridge_foods, many=True, context={'request': request})
         return Response(serializer.data, status=200)
 
     @extend_schema(
@@ -117,7 +148,7 @@ class FridgeFoodViewSet(viewsets.ViewSet):
                 quantity=quantity
             )
 
-        serializer = FridgeFoodSerializer(food)
+        serializer = FridgeFoodSerializer(food, context={'request': request})
         return Response(serializer.data, status=201)
 
     @extend_schema(
@@ -155,7 +186,7 @@ class FridgeFoodViewSet(viewsets.ViewSet):
             food.quantity = request.data.get('quantity', food.quantity)
 
         food.save()
-        serializer = FridgeFoodSerializer(food)
+        serializer = FridgeFoodSerializer(food, context={'request': request})
         return Response(serializer.data, status=200)
 
     @extend_schema(

@@ -23,7 +23,8 @@ class FridgeFoodSerializer(serializers.ModelSerializer):
 
     def get_image_url(self, obj) -> str:
         if obj.default_food and obj.default_food.image:
-            return obj.default_food.image.url
+            request = self.context.get('request')
+            return request.build_absolute_uri(obj.default_food.image.url)
         return None
 
 

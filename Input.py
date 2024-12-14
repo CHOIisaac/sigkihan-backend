@@ -18,7 +18,7 @@ def insert_default_foods():
         {"name": "소고기", "image": "/food_images/beef.svg", "comment": "부드러운 소고기, 지금 구워야 풍미를 놓치지 않아요 🥩"},
         {"name": "닭고기", "image": "/food_images/chicken.svg", "comment": "닭! 지금 요리하면 담백함이 쫙~ 펼쳐져요! 🍗"},
         {"name": "고등어", "image": "/food_images/mackerel.svg", "comment": "고등어, 오늘 굽지 않으면 고등급의 맛을 놓칠지도 몰라요! 🐟"},
-        {"name": "청경채", "image": "/food_images/bokchoy.svg", "comment": "청경채의 초록빛 매력, 지금 아니면 놓쳐요! 🥬"},
+        {"name": "청경채", "image": "/food_images/bok_choy.svg", "comment": "청경채의 초록빛 매력, 지금 아니면 놓쳐요! 🥬"},
         {"name": "계란", "image": "/food_images/egg.svg", "comment": "오늘이 신선함의 끝자락! 계란 후라이로 맛있게 즐기세요! 🍳"},
         {"name": "소시지", "image": "/food_images/sausage.svg", "comment": "소시지는 딱 지금이 맛있죠! 지나면 쏘쏘해져요 🥖"},
         {"name": "밥", "image": "/food_images/rice.svg", "comment": "냉장고 속에 오래 두면 밥맛 없어져요! 🍚"},
@@ -56,11 +56,14 @@ def insert_default_foods():
         for food in food_items:
             cursor.execute(
                 """
-                INSERT INTO default_food (name, image)
-                VALUES (%s, %s)
-                ON CONFLICT (name) DO NOTHING
+                INSERT INTO default_food (name, image, comment)
+                VALUES (%s, %s, %s)
+                ON CONFLICT (name)
+                DO UPDATE SET
+                    image = EXCLUDED.image,
+                    comment = EXCLUDED.comment
                 """,  # PostgreSQL 예시, MySQL에서는 ON CONFLICT가 아닌 REPLACE 사용
-                [food["name"], food["image"]],
+                [food["name"], food["image"], food["comment"]],
             )
 
     print("Default foods added successfully.")
