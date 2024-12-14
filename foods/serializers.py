@@ -10,16 +10,16 @@ class DefaultFoodSerializer(serializers.ModelSerializer):
 
 
 class FridgeFoodSerializer(serializers.ModelSerializer):
-    name = serializers.SerializerMethodField()
+    # name = serializers.SerializerMethodField()
     default_food_name = serializers.CharField(source="default_food.name", read_only=True)
     image_url = serializers.SerializerMethodField()
     class Meta:
         model = FridgeFood
         fields = ['id', 'name', 'default_food_name', 'purchase_date', 'expiration_date', 'quantity', 'image_url']
 
-    @extend_schema_field(serializers.CharField)
-    def get_name(self, obj) -> str:
-        return obj.default_food.name if obj.default_food else obj.name
+    # @extend_schema_field(serializers.CharField)
+    # def get_name(self, obj) -> str:
+    #     return obj.default_food.name if obj.default_food else obj.name
 
     def get_image_url(self, obj) -> str:
         if obj.default_food and obj.default_food.image:

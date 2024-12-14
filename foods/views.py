@@ -143,6 +143,7 @@ class FridgeFoodViewSet(viewsets.ViewSet):
             food = FridgeFood.objects.create(
                 refrigerator=refrigerator,
                 name=name,
+                default_food_id=30,
                 purchase_date=purchase_date,
                 expiration_date=expiration_date,
                 quantity=quantity
