@@ -15,6 +15,7 @@ from .serializers import DefaultFoodSerializer, FridgeFoodSerializer
 @extend_schema(
     summary="디폴트 음식 조회",
     description="디폴트 음식 목록을 조회하거나 검색합니다. 검색어를 포함하지 않으면 모든 음식을 반환합니다.",
+    tags=["Foods"],
     responses={
         200: {
             "description": "디폴트 음식 목록과 직접 추가하기 이미지 경로",
@@ -69,7 +70,8 @@ class FridgeFoodViewSet(viewsets.ViewSet):
     @extend_schema(
         summary="내 냉장고 음식 리스트",
         description="사용자의 냉장고에 추가된 모든 음식을 조회합니다.",
-        responses={200: FridgeFoodSerializer(many=True)}
+        responses={200: FridgeFoodSerializer(many=True)},
+        tags = ["Foods"],
     )
     def list(self, request, refrigerator_id=None):
         """
@@ -94,6 +96,7 @@ class FridgeFoodViewSet(viewsets.ViewSet):
     @extend_schema(
         summary="음식 추가",
         description="냉장고에 기본 제공 음식 또는 사용자 정의 음식을 추가합니다.",
+        tags=["Foods"],
         request={
             "application/json": {
                 "type": "object",
@@ -155,6 +158,7 @@ class FridgeFoodViewSet(viewsets.ViewSet):
     @extend_schema(
         summary="냉장고 음식 수정",
         description="냉장고에 있는 음식을 수정합니다. 디폴트 푸드인 경우 구매일자, 소비기한, 수량만 수정 가능하며, 사용자 정의 푸드인 경우 이름도 수정 가능합니다.",
+        tags=["Foods"],
         request={
             "application/json": {
                 "type": "object",
@@ -193,6 +197,7 @@ class FridgeFoodViewSet(viewsets.ViewSet):
     @extend_schema(
         summary="냉장고 음식 삭제",
         description="냉장고에서 특정 음식을 삭제합니다.",
+        tags=["Foods"],
         parameters=[
             OpenApiParameter(
                 name="id",
@@ -220,6 +225,7 @@ class FoodHistoryView(APIView):
     @extend_schema(
         summary="음식 소비 또는 폐기 기록 추가",
         description="냉장고에서 특정 음식을 소비하거나 폐기한 기록을 추가합니다.",
+        tags=["Foods"],
         request={
             "application/json": {
                 "type": "object",

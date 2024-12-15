@@ -17,9 +17,11 @@ class NotificationListView(APIView):
     """
     특정 냉장고의 알림 조회
     """
+    permission_classes = [IsAuthenticated]
     @extend_schema(
         summary="냉장고 식품 알림 조회",
         description="특정 냉장고와 연결된 사용자들의 모든 알림을 조회합니다. 7일 이내의 읽지 않은 알림만 반환합니다.",
+        tags=["Notifications"],
         responses={200: NotificationSerializer(many=True)}
     )
     def get(self, request, refrigerator_id):
@@ -27,9 +29,9 @@ class NotificationListView(APIView):
 
         # 특정 냉장고와 연결된 모든 사용자들의 알림 조회
         notifications = Notification.objects.filter(
-            user_id=request.user.id,
             refrigerator_id=refrigerator_id,
             created_at__gte=one_week_ago,
+            d_day='D-3'
             # is_read=False
         ).order_by('-created_at')
 
@@ -41,16 +43,17 @@ class PopupNotificationListView(APIView):
     """
     팝업 알림 조회
     """
+    permission_classes = [IsAuthenticated]
     @extend_schema(
         summary="팝업 식품 알림 조회",
         description="특정 냉장고와 연결된 사용자들의 모든 알림을 조회합니다.",
+        tags=["Notifications"],
         responses={200: NotificationSerializer(many=True)}
     )
     def get(self, request, refrigerator_id):
 
         # 특정 냉장고와 연결된 모든 사용자들의 알림 조회
         notifications = Notification.objects.filter(
-            user_id=request.user.id,
             refrigerator_id=refrigerator_id,
             d_day='D-0',
             is_read=False
@@ -64,10 +67,11 @@ class NotificationMarkAsReadView(APIView):
     """
     알림 읽음 처리
     """
-
+    permission_classes = [IsAuthenticated]
     @extend_schema(
         summary="냉장고 식품 알림 읽음 처리",
         description="특정 냉장고의 알림을 읽음 상태로 변경합니다.",
+        tags=["Notifications"],
         responses={
             200: {"description": "알림 읽음 처리 성공"},
             404: {"description": "알림을 찾을 수 없음"}
@@ -88,10 +92,11 @@ class PopupNotificationMarkAsReadView(APIView):
     """
     알림 읽음 처리
     """
-
+    permission_classes = [IsAuthenticated]
     @extend_schema(
         summary="냉장고 식품 팝업 알림 읽음 처리",
         description="특정 냉장고의 알림을 읽음 상태로 변경합니다.",
+        tags=["Notifications"],
         responses={
             200: {"description": "알림 읽음 처리 성공"},
             404: {"description": "알림을 찾을 수 없음"}
@@ -112,10 +117,11 @@ class CreateNotificationAPIView(APIView):
     """
     특정 냉장고와 연결된 모든 사용자에게 알림 생성
     """
-
+    permission_classes = [IsAuthenticated]
     @extend_schema(
         summary="냉장고 식품 알림 생성",
         description="특정 냉장고에 연결된 모든 사용자에게 알림을 생성합니다.",
+        tags=["Notifications"],
         request={
             "application/json": {
                 "type": "object",
@@ -135,8 +141,13 @@ class CreateNotificationAPIView(APIView):
         d_3_date = today + timedelta(days=3)
         foods_d_3 = FridgeFood.objects.filter(expiration_date=d_3_date)
         for food in foods_d_3:
-            users = RefrigeratorAccess.objects.filter(refrigerator=food.refrigerator).values_list('user', flat=True)
+            print(food.name)
+            print(food.default_food)
+            print(food.default_food.id)
+            print(food.refrigerator)
+            users = RefrigeratorAccess.objects.filter(refrigerator=refrigerator_id).values_list('user', flat=True)
             for user_id in users:
+                print(user_id)
                 Notification.objects.create(
                     user_id=user_id,
                     refrigerator=food.refrigerator,
@@ -150,10 +161,11 @@ class CreatePopupNotificationAPIView(APIView):
     """
     특정 냉장고와 연결된 모든 사용자에게 알림 생성
     """
-
+    permission_classes = [IsAuthenticated]
     @extend_schema(
         summary="냉장고 팝업 알림 생성",
         description="특정 냉장고에 연결된 모든 사용자에게 알림을 생성합니다.",
+        tags=["Notifications"],
         request={
             "application/json": {
                 "type": "object",
@@ -174,7 +186,7 @@ class CreatePopupNotificationAPIView(APIView):
         print(foods_d_0)
         for food in foods_d_0:
             food_name = food.name
-            users = RefrigeratorAccess.objects.filter(refrigerator=food.refrigerator).values_list('user', flat=True)
+            users = RefrigeratorAccess.objects.filter(refrigerator=refrigerator_id).values_list('user', flat=True)
             for user_id in users:
                 Notification.objects.create(
                     user_id=user_id,

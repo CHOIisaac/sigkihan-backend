@@ -76,7 +76,13 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'API documentation for 식기한 냉장고',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,  # Schema를 API 엔드포인트로 제공하지 않음
-
+    'TAGS': [
+            {'name': 'Users', 'description': 'User-related operations'},
+            {'name': 'Refrigerators', 'description': 'Refrigerator management'},
+            {'name': 'Foods', 'description': 'Food-related operations'},
+            {'name': 'Notifications', 'description': 'Notification-related operations'},
+            {'name': 'Tests', 'description': 'API Test'},
+        ],
     'SECURITY': [
             {
                 "BearerAuth": {

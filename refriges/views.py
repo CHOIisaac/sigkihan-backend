@@ -1,3 +1,4 @@
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -6,6 +7,10 @@ from refriges.models import RefrigeratorAccess, Refrigerator
 from refriges.serializers import RefrigeratorSerializer
 
 
+@extend_schema(
+        tags=["Refrigerators"],
+        summary="사용자의 냉장고 조회",
+)
 class RefrigeratorView(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = RefrigeratorSerializer

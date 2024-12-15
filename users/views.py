@@ -16,6 +16,7 @@ class TestAPIView(GenericAPIView):
     @extend_schema(
         summary="Test API",
         description="Returns a simple test message",
+        tags=["Tests"],
     )
     def get(self, request):
         return Response({"message": "API is working"})
@@ -28,6 +29,25 @@ class UserDetailAPIView(APIView):
     """
     serializer_class = UserSerializer
 
+    @extend_schema(
+        summary="사용자 정보 조회",
+        description="특정 사용자의 ID를 기반으로 상세 정보를 조회합니다.",
+        tags=["Users"],
+        parameters=[
+            {
+                "name": "id",
+                "in": "path",
+                "required": True,
+                "description": "조회할 사용자의 ID",
+                "schema": {"type": "integer"}
+            }
+        ],
+        responses={
+            200: UserDetailSerializer,
+            404: {"description": "사용자를 찾을 수 없음"},
+            500: {"description": "예상치 못한 오류 발생"}
+        },
+    )
     def get(self, request, id):
         try:
             user = get_object_or_404(CustomUser, pk=id)  # 객체를 조회
@@ -44,6 +64,7 @@ class UserDetailAPIView(APIView):
     @extend_schema(
         summary="사용자 정보 수정",
         description="사용자의 이름과 프로필 이미지를 수정합니다.",
+        tags=["Users"],
         request={
             "application/json": {
                 "type": "object",
@@ -85,6 +106,16 @@ class UserDetailAPIView(APIView):
             return Response({"error": f"An unexpected error occurred: {str(e)}"},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    @extend_schema(
+        summary="사용자 삭제",
+        description="특정 사용자를 완전히 삭제합니다. 사용자 ID를 경로 매개변수로 전달해야 합니다.",
+        tags=["Users"],
+        responses={
+            204: {"description": "사용자 삭제 성공"},
+            404: {"description": "사용자를 찾을 수 없음"},
+            500: {"description": "예상치 못한 오류 발생"}
+        },
+    )
     def delete(self, request, id):
         """
         DELETE 요청으로 사용자 완전 삭제
