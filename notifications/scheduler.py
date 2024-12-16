@@ -46,8 +46,7 @@ def send_notifications():
 
 
 def start_scheduler():
-    # 개발 환경에서만 스케줄러 실행
     scheduler = BackgroundScheduler()
-    scheduler.add_job(send_notifications, CronTrigger(hour=0, minute=15), id="daily_notifications", replace_existing=True)
+    scheduler.add_job(send_notifications, 'interval', minutes=1, id="daily_notifications", replace_existing=True)
     scheduler.start()
     print("Scheduler started.")

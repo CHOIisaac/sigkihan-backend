@@ -46,7 +46,7 @@ INSTALLED_APPS = [
     'users',
     'refriges',
     'foods',
-    'notifications',
+    'notifications.apps.NotificationsConfig',
 ]
 
 
