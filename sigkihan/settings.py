@@ -13,6 +13,7 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+from celery.schedules import crontab
 from decouple import config, Csv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -46,6 +47,9 @@ INSTALLED_APPS = [
     'users',
     'refriges',
     'foods',
+    'celery',
+    'django_celery_beat',
+    'django_celery_results',
     'notifications.apps.NotificationsConfig',
 ]
 
@@ -240,3 +244,18 @@ KAKAO_CLIENT_ID = config('KAKAO_CLIENT_ID')
 KAKAO_REDIRECT_URI = config('KAKAO_REDIRECT_URI')
 KAKAO_TOKEN_URL = config('KAKAO_TOKEN_URL')
 KAKAO_USER_INFO_URL = config('KAKAO_USER_INFO_URL')
+
+# Celery 설정
+CELERY_BROKER_URL = 'redis://localhost:6379/0'  # Redis 브로커
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'  # 작업 결과 저장소
+CELERY_ACCEPT_CONTENT = ['json']  # 데이터 직렬화 형식
+CELERY_TASK_SERIALIZER = 'json'  # JSON 형식 사용
+CELERY_TIMEZONE = 'Asia/Seoul'  # 시간대 설정
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers.DatabaseScheduler'
+
+CELERY_BEAT_SCHEDULE = {
+    'send_notifications_daily': {
+        'task': 'notifications.tasks.send_notifications',
+        'schedule': crontab(minute="*/1"),  # 매일 00:00에 실행
+    },
+}
