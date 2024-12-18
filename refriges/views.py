@@ -16,8 +16,6 @@ class RefrigeratorView(APIView):
     serializer_class = RefrigeratorSerializer
 
     def get(self, request, id=None):
-        print(request.user)
-        print(id)
 
         # 현재 사용자가 접근할 수 있는 냉장고 조회
         try:
