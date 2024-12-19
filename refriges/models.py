@@ -35,3 +35,33 @@ class RefrigeratorAccess(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.role} of {self.refrigerator.name}"
+
+
+class RefrigeratorInvitation(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('declined', 'Declined'),
+    ]
+
+    inviter = models.ForeignKey(
+        'users.CustomUser', on_delete=models.CASCADE, related_name='sent_invitations', verbose_name="초대한 사람"
+    )
+    invitee_email = models.EmailField(verbose_name="초대받은 사람 이메일")  # 초대받은 사용자의 이메일
+    refrigerator = models.ForeignKey(
+        Refrigerator, on_delete=models.CASCADE, related_name='invitations', verbose_name="냉장고"
+    )
+    status = models.CharField(
+        max_length=10, choices=STATUS_CHOICES, default='pending', verbose_name="초대 상태"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="초대 날짜")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="상태 변경 날짜")
+
+    def __str__(self):
+        return f"{self.invitee_email} - {self.refrigerator.name} ({self.status})"
+
+    class Meta:
+        db_table = 'refrigerator_invitation'
+        verbose_name = '냉장고 초대'
+        verbose_name_plural = '냉장고 초대'
+        ordering = ['-created_at']
