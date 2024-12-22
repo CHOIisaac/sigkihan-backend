@@ -1,13 +1,12 @@
 from django.urls import path
-from .views import RefrigeratorView
+from .views import RefrigeratorView, InvitationListView, RefrigeratorInvitationView, \
+    InvitationStatusUpdateView
 
 urlpatterns = [
     path('<int:id>', RefrigeratorView.as_view(), name='refrigerator-detail'),
     # 초대 생성 API
-    path('refrigerators/<int:refrigerator_id>/invite', RefrigeratorView.CreateInvitationView.as_view(), name='create_invitation'),
-    # 초대 목록 조회 API
-    path('invitations', RefrigeratorView.InvitationListView.as_view(), name='list_invitations'),
-    # 초대 상태 업데이트 API (수락/거부)
-    path('invitations/<int:invitation_id>/update', RefrigeratorView.UpdateInvitationStatusView.as_view(),
-         name='update_invitation_status'),
+    path('<int:refrigerator_id>/invitations', RefrigeratorInvitationView.as_view(), name='refrigerator-invite'),
+    path('invitations/<int:invite_id>', InvitationStatusUpdateView.as_view(), name='invitation-status-update'),
+    path('invitations', InvitationListView.as_view(), name='invitation-list'),
 ]
+

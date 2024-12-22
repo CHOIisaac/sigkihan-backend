@@ -1,6 +1,7 @@
 from django.http import Http404
 from rest_framework.generics import GenericAPIView, get_object_or_404
 from rest_framework.mixins import ListModelMixin
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema
 from rest_framework import viewsets, status
@@ -27,6 +28,7 @@ class UserDetailAPIView(APIView):
     GET: 특정 사용자 조회
     PUT: 사용자 정보 수정
     """
+    permission_classes = [IsAuthenticated]
     serializer_class = UserSerializer
 
     @extend_schema(
