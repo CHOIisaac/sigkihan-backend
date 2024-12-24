@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from refriges.models import Refrigerator, RefrigeratorAccess
+from refriges.models import Refrigerator, RefrigeratorAccess, RefrigeratorMemo
 
 
 class RefrigeratorSerializer(serializers.ModelSerializer):
@@ -31,3 +31,10 @@ class RefrigeratorSerializer(serializers.ModelSerializer):
             for member in members
         ]
 
+
+class RefrigeratorMemoSerializer(serializers.ModelSerializer):
+    user = serializers.StringRelatedField(read_only=True)
+
+    class Meta:
+        model = RefrigeratorMemo
+        fields = ['id', 'title', 'content', 'created_at', 'updated_at', 'user']

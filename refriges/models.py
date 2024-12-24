@@ -65,3 +65,25 @@ class RefrigeratorInvitation(models.Model):
         verbose_name = '냉장고 초대'
         verbose_name_plural = '냉장고 초대'
         ordering = ['-created_at']
+
+
+class RefrigeratorMemo(models.Model):
+    refrigerator = models.ForeignKey(
+        'refriges.Refrigerator', on_delete=models.CASCADE, related_name='memos', verbose_name='냉장고'
+    )
+    user = models.ForeignKey(
+        'users.CustomUser', on_delete=models.CASCADE, related_name='memos', verbose_name='작성자'
+    )
+    title = models.CharField(max_length=100, verbose_name='메모 제목')
+    content = models.TextField(verbose_name='메모 내용')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='생성 날짜')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='수정 날짜')
+
+    class Meta:
+        db_table = 'refrigerator_memo'
+        verbose_name = '냉장고 메모'
+        verbose_name_plural = '냉장고 메모'
+        ordering = ['-created_at']  # 최신순 정렬
+
+    def __str__(self):
+        return f"{self.title} - {self.user.name}"
