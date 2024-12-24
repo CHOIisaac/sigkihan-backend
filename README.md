@@ -6,11 +6,33 @@
 🚀 서비스 소개
 1. 냉장고 관리:
    - 냉장고 내 식품의 구매일, 소비기한, 수량 등을 체계적으로 관리합니다.
+  
 2. 소비기한 알림:
    - D-3 및 D-0 알림을 제공하여 소비기한이 가까워진 식품을 알려줍니다.
+  
 3. 냉장고 공유:
    - 가족, 친구와 냉장고를 공유하여 함께 관리하고 협업할 수 있습니다.
+  
 4. 메모 기능:
    - 냉장고마다 메모를 작성하고 공유된 사용자끼리 함께 볼 수 있습니다.
+  
 5. AI 추천 기능 (추가 예정):
    - 냉장고에 남은 식재료를 활용한 레시피를 추천합니다.
+
+🛠 기술 스택
+
+Backend
+	•	Language & Framework: Python, Django Rest Framework (DRF)
+	•	Database: PostgreSQL
+	•	Authentication: JWT (JSON Web Token)
+	•	Scheduling: Celery with Redis
+	•	Task Queue: APScheduler (개발 환경에서 대체)
+
+Frontend
+	•	React.js (예상)
+
+DevOps
+	•	Server: AWS EC2
+	•	Web Server: Nginx, Gunicorn
+	•	Task Queue Broker: Redis
+	•	Containerization: Docker (예정)
