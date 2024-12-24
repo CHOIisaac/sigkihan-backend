@@ -19,20 +19,20 @@
 5. AI 추천 기능 (추가 예정):
    - 냉장고에 남은 식재료를 활용한 레시피를 추천합니다.
 
+
 🛠 기술 스택
 
 Backend
 - Language & Framework: Python, Django Rest Framework (DRF)
 - Database: PostgreSQL
-	•	Authentication: JWT (JSON Web Token)
-	•	Scheduling: Celery with Redis
-	•	Task Queue: APScheduler (개발 환경에서 대체)
+- Scheduling: Celery with Redis
 
-Frontend
-	•	React.js (예상)
 
 DevOps
-	•	Server: AWS EC2
-	•	Web Server: Nginx, Gunicorn
-	•	Task Queue Broker: Redis
-	•	Containerization: Docker (예정)
+- Server: AWS EC2
+- Web Server: Nginx, Gunicorn
+- Containerization: Docker
+
+
+💾 API 문서
+- API 문서는 Swagger로 작성했습니다.
