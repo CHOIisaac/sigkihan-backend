@@ -22,8 +22,8 @@
 🛠 기술 스택
 
 Backend
-•Language & Framework: Python, Django Rest Framework (DRF)
-•Database: PostgreSQL
+- Language & Framework: Python, Django Rest Framework (DRF)
+- Database: PostgreSQL
 	•	Authentication: JWT (JSON Web Token)
 	•	Scheduling: Celery with Redis
 	•	Task Queue: APScheduler (개발 환경에서 대체)
