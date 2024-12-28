@@ -27,12 +27,10 @@ urlpatterns = [
     # Swagger UI
     path('swagger/', SpectacularSwaggerView.as_view(), name='swagger-ui'),
     path("redoc", SpectacularRedocView.as_view(), name="redoc"),
+
     path('api/', include('users.urls')),
     path('api/', include('refriges.urls')),
     path('api/', include('foods.urls')),
     path('api/refrigerators/', include('notifications.urls')),
     path('auth/', include('auth.urls')),
-    # path('api/groups/', include('groups.urls')),
-    # path('api/refriges/', include('refriges.urls')),
-    # path('api/invitations/', include('invitations.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

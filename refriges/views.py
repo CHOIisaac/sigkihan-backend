@@ -146,8 +146,9 @@ class RefrigeratorInvitationView(APIView):
     )
     def post(self, request, refrigerator_id):
         inviter = request.user
-        invited_user_id = request.data.get('invited_user_id')
-        invited_user = get_object_or_404(CustomUser, pk=invited_user_id)
+        invitee_email = request.data.get('email')
+        if invitee_email:
+            return Response({"error":"Email is required to send an invitation."}, status=400)
 
         # 냉장고 접근 확인
         refrigerator = get_object_or_404(Refrigerator, pk=refrigerator_id)
@@ -157,7 +158,7 @@ class RefrigeratorInvitationView(APIView):
         # 초대 생성
         RefrigeratorInvitation.objects.create(
             refrigerator=refrigerator,
-            invited_user=invited_user,
+            invitee_email=invitee_email,
             inviter=inviter
         )
         return Response({"message": "Invitation sent successfully."}, status=201)
@@ -360,11 +361,11 @@ class RefrigeratorMemoDetailView(APIView):
         },
         responses={200: RefrigeratorMemoSerializer}
     )
-    def patch(self, request, memo_id):
+    def patch(self, request, refrigerator_id, memo_id):
         """
         메모 수정
         """
-        memo = get_object_or_404(RefrigeratorMemo, id=memo_id, user=request.user)
+        memo = get_object_or_404(RefrigeratorMemo, id=memo_id, user=request.user, refrigerator_id=refrigerator_id)
         title = request.data.get('title', memo.title)
         content = request.data.get('content', memo.content)
 
@@ -381,10 +382,10 @@ class RefrigeratorMemoDetailView(APIView):
         tags=["Refrigerators"],
         responses={204: {"description": "메모 삭제 성공"}}
     )
-    def delete(self, request, memo_id):
+    def delete(self, request, refrigerator_id, memo_id):
         """
         메모 삭제
         """
-        memo = get_object_or_404(RefrigeratorMemo, id=memo_id, user=request.user)
+        memo = get_object_or_404(RefrigeratorMemo, id=memo_id, user=request.user, refrigerator_id=refrigerator_id)
         memo.delete()
         return Response({"message": "Memo deleted successfully."}, status=204)

@@ -61,7 +61,7 @@ class CustomUser(AbstractBaseUser):
     objects = CustomUserManager()  # 사용자 매니저 연결
 
     def __str__(self):
-        return self.email
+        return self.name
 
     class Meta:
         db_table = 'user'
