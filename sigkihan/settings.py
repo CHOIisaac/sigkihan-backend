@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'django_celery_beat',
     'django_celery_results',
     'notifications.apps.NotificationsConfig',
+    'channels',
 ]
 
 
@@ -83,6 +84,8 @@ SPECTACULAR_SETTINGS = {
     'TAGS': [
             {'name': 'Users', 'description': 'User-related operations'},
             {'name': 'Refrigerators', 'description': 'Refrigerator management'},
+            {'name': 'RefrigeratorMemos', 'description': 'RefrigeratorMemos management'},
+            {'name': 'RefrigeratorInvitations', 'description': 'RefrigeratorInvitations management'},
             {'name': 'Foods', 'description': 'Food-related operations'},
             {'name': 'Notifications', 'description': 'Notification-related operations'},
             {'name': 'Tests', 'description': 'API Test'},
@@ -134,6 +137,14 @@ TEMPLATES = [
         },
     },
 ]
+
+
+ASGI_APPLICATION = 'sigkihan.asgi.application'
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+    },
+}
 
 WSGI_APPLICATION = 'sigkihan.wsgi.application'
 

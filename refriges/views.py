@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from refriges.models import RefrigeratorAccess, Refrigerator, RefrigeratorInvitation, RefrigeratorMemo
-from refriges.serializers import RefrigeratorSerializer, RefrigeratorMemoSerializer
+from refriges.serializers import RefrigeratorSerializer, RefrigeratorMemoSerializer, RefrigeratorInvitationSerializer
 from users.models import CustomUser
 
 
@@ -128,12 +128,12 @@ class RefrigeratorInvitationView(APIView):
         # parameters=[
         #     OpenApiParameter(name="refrigerator_id", description="냉장고 ID", required=True, type=int)
         # ],
-        tags=["Refrigerators"],
+        tags=["RefrigeratorInvitations"],
         request={
             "application/json": {
                 "type": "object",
                 "properties": {
-                    "invited_user_id": {"type": "integer", "example": 5, "description": "초대할 사용자 ID"}
+                    "email": {"type": "string", "example": "admin2@admin.com", "description": "초대할 사용자 ID"}
                 },
                 "required": ["invited_user_id"]
             }
@@ -147,7 +147,8 @@ class RefrigeratorInvitationView(APIView):
     def post(self, request, refrigerator_id):
         inviter = request.user
         invitee_email = request.data.get('email')
-        if invitee_email:
+        print(invitee_email)
+        if not invitee_email:
             return Response({"error":"Email is required to send an invitation."}, status=400)
 
         # 냉장고 접근 확인
@@ -176,7 +177,7 @@ class InvitationStatusUpdateView(APIView):
         parameters=[
             OpenApiParameter(name="invite_id", description="초대 ID", required=True, type=int)
         ],
-        tags=["Refrigerators"],
+        tags=["RefrigeratorInvitations"],
         request={
             "application/json": {
                 "type": "object",
@@ -218,61 +219,24 @@ class InvitationListView(APIView):
     초대 목록 조회
     """
     permission_classes = [IsAuthenticated]
-
     @extend_schema(
         summary="초대 목록 조회",
-        description="사용자가 받은 초대 및 보낸 초대 목록을 조회합니다.",
-        tags=["Refrigerators"],
-        responses={
-            200: {
-                "description": "초대 목록 조회 성공",
-                "content": {
-                    "application/json": {
-                        "example": {
-                            "received_invitations": [
-                                {
-                                    "id": 1,
-                                    "refrigerator_name": "Family Fridge",
-                                    "status": "pending"
-                                }
-                            ],
-                            "sent_invitations": [
-                                {
-                                    "id": 2,
-                                    "refrigerator_name": "Office Fridge",
-                                    "status": "accepted"
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        }
+        description="사용자가 받은 초대 목록을 반환합니다. 초대 상태가 'pending'인 초대만 조회됩니다.",
+        tags=["RefrigeratorInvitations"],
+        responses={200: RefrigeratorInvitationSerializer(many=True)}
     )
     def get(self, request):
-        received_invitations = RefrigeratorInvitation.objects.filter(invited_user=request.user)
-        sent_invitations = RefrigeratorInvitation.objects.filter(inviter=request.user)
+        user_email = request.user.email
 
-        data = {
-            "received_invitations": [
-                {
-                    "id": invitation.id,
-                    "refrigerator_name": invitation.refrigerator.name,
-                    "status": invitation.status
-                }
-                for invitation in received_invitations
-            ],
-            "sent_invitations": [
-                {
-                    "id": invitation.id,
-                    "refrigerator_name": invitation.refrigerator.name,
-                    "status": invitation.status
-                }
-                for invitation in sent_invitations
-            ],
-        }
+        # 사용자의 이메일로 초대받은 초대 조회
+        invitations = RefrigeratorInvitation.objects.filter(
+            invitee_email=user_email,
+            status='pending'  # 'pending' 상태의 초대만 반환
+        ).order_by('-created_at')
 
-        return Response(data, status=200)
+        # 직렬화하여 반환
+        serializer = RefrigeratorInvitationSerializer(invitations, many=True)
+        return Response(serializer.data, status=200)
 
 
 class RefrigeratorMemoView(APIView):
@@ -281,7 +245,7 @@ class RefrigeratorMemoView(APIView):
     @extend_schema(
         summary="냉장고 메모 추가",
         description="특정 냉장고에 메모를 추가합니다.",
-        tags=["Refrigerators"],
+        tags=["RefrigeratorMemos"],
         parameters=[
             OpenApiParameter(name="refrigerator_id", description="냉장고 ID", required=True, type=int)
         ],
@@ -325,7 +289,7 @@ class RefrigeratorMemoView(APIView):
     @extend_schema(
         summary="냉장고 메모 조회",
         description="특정 냉장고의 메모를 최신순으로 조회합니다.",
-        tags=["Refrigerators"],
+        tags=["RefrigeratorMemos"],
         responses={200: RefrigeratorMemoSerializer(many=True)}
     )
     def get(self, request, refrigerator_id):
@@ -349,7 +313,7 @@ class RefrigeratorMemoDetailView(APIView):
     @extend_schema(
         summary="메모 수정",
         description="사용자가 작성한 메모를 수정합니다.",
-        tags=["Refrigerators"],
+        tags=["RefrigeratorMemos"],
         request={
             "application/json": {
                 "type": "object",
@@ -379,7 +343,7 @@ class RefrigeratorMemoDetailView(APIView):
     @extend_schema(
         summary="메모 삭제",
         description="사용자가 작성한 메모를 삭제합니다.",
-        tags=["Refrigerators"],
+        tags=["RefrigeratorMemos"],
         responses={204: {"description": "메모 삭제 성공"}}
     )
     def delete(self, request, refrigerator_id, memo_id):
