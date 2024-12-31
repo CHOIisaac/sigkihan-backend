@@ -24,9 +24,9 @@ class RefrigeratorSerializer(serializers.ModelSerializer):
         members = obj.access_list.filter(role='member')
         return [
             {
-                'id': members.user.id,
-                'email': members.user.email,
-                'name': members.user.name
+                'id': member.user.id,
+                'email': member.user.email,
+                'name': member.user.name
             }
             for member in members
         ]

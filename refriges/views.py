@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from refriges.models import RefrigeratorAccess, Refrigerator, RefrigeratorInvitation, RefrigeratorMemo
 from refriges.serializers import RefrigeratorSerializer, RefrigeratorMemoSerializer, RefrigeratorInvitationSerializer
+from refriges.services import create_invitation
 from users.models import CustomUser
 
 
@@ -147,9 +148,8 @@ class RefrigeratorInvitationView(APIView):
     def post(self, request, refrigerator_id):
         inviter = request.user
         invitee_email = request.data.get('email')
-        print(invitee_email)
         if not invitee_email:
-            return Response({"error":"Email is required to send an invitation."}, status=400)
+            return Response({"error": "이메일을 확인해주세요."}, status=400)
 
         # 냉장고 접근 확인
         refrigerator = get_object_or_404(Refrigerator, pk=refrigerator_id)
@@ -157,12 +157,8 @@ class RefrigeratorInvitationView(APIView):
             return Response({"error": "You are not the owner of this refrigerator."}, status=403)
 
         # 초대 생성
-        RefrigeratorInvitation.objects.create(
-            refrigerator=refrigerator,
-            invitee_email=invitee_email,
-            inviter=inviter
-        )
-        return Response({"message": "Invitation sent successfully."}, status=201)
+        invitation = create_invitation(inviter, invitee_email, refrigerator)
+        return Response({"invitation_id": invitation.id, "message": "Invitation sent successfully."}, status=201)
 
 
 class InvitationStatusUpdateView(APIView):
@@ -174,9 +170,9 @@ class InvitationStatusUpdateView(APIView):
     @extend_schema(
         summary="초대 상태 업데이트",
         description="사용자가 받은 초대의 상태를 수락(accepted) 또는 거절(declined)로 변경합니다.",
-        parameters=[
-            OpenApiParameter(name="invite_id", description="초대 ID", required=True, type=int)
-        ],
+        # parameters=[
+        #     OpenApiParameter(name="invite_id", description="초대 ID", required=True, type=int)
+        # ],
         tags=["RefrigeratorInvitations"],
         request={
             "application/json": {
@@ -194,7 +190,7 @@ class InvitationStatusUpdateView(APIView):
         }
     )
     def patch(self, request, invite_id):
-        invite = get_object_or_404(RefrigeratorInvitation, pk=invite_id, invited_user=request.user)
+        invite = get_object_or_404(RefrigeratorInvitation, pk=invite_id, invitee_email=request.user.email)
         status_value = request.data.get('status')
 
         if status_value not in ['accepted', 'declined']:
@@ -239,6 +235,9 @@ class InvitationListView(APIView):
         return Response(serializer.data, status=200)
 
 
+class Remove
+
+
 class RefrigeratorMemoView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -246,9 +245,9 @@ class RefrigeratorMemoView(APIView):
         summary="냉장고 메모 추가",
         description="특정 냉장고에 메모를 추가합니다.",
         tags=["RefrigeratorMemos"],
-        parameters=[
-            OpenApiParameter(name="refrigerator_id", description="냉장고 ID", required=True, type=int)
-        ],
+        # parameters=[
+        #     OpenApiParameter(name="refrigerator_id", description="냉장고 ID", required=True, type=int)
+        # ],
         request={
             "application/json": {
                 "type": "object",
