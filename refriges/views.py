@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from refriges.models import RefrigeratorAccess, Refrigerator, RefrigeratorInvitation, RefrigeratorMemo
-from refriges.serializers import RefrigeratorSerializer, RefrigeratorMemoSerializer, RefrigeratorInvitationSerializer
+from refriges.serializers import RefrigeratorSerializer, RefrigeratorMemberSerializer, RefrigeratorMemoSerializer, RefrigeratorInvitationSerializer
 from refriges.services import create_invitation
 from users.models import CustomUser
 
@@ -32,7 +32,7 @@ class RefrigeratorViewSet(viewsets.ViewSet):
         description="냉장고 ID로 특정 냉장고의 상세 정보를 조회합니다.",
         tags=["Refrigerators"],
         responses={
-            200: RefrigeratorSerializer,
+            200: RefrigeratorMemberSerializer,
             404: {"description": "냉장고를 찾을 수 없습니다."}
         }
     )
@@ -41,7 +41,7 @@ class RefrigeratorViewSet(viewsets.ViewSet):
         특정 냉장고 조회
         """
         refrigerator = get_object_or_404(Refrigerator, id=pk, access_list__user=request.user)
-        serializer = RefrigeratorSerializer(refrigerator)
+        serializer = RefrigeratorMemberSerializer(refrigerator)
         return Response(serializer.data, status=200)
 
     @extend_schema(
@@ -235,7 +235,63 @@ class InvitationListView(APIView):
         return Response(serializer.data, status=200)
 
 
-class Remove
+class RemoveMemberView(APIView):
+    @extend_schema(
+        summary="냉장고 멤버 추방",
+        description="오너가 특정 멤버를 냉장고에서 추방합니다.",
+        tags=['RefrigeratorInvitations'],
+        parameters=[],
+        responses={
+            200: {"message": "Member has been removed from the refrigerator."},
+            403: {"message": "You do not have permission to remove this member."},
+            404: {"message": "Refrigerator or member not found."}
+        },
+    )
+    def delete(self, request, refrigerator_id, member_id):
+        owner_access = get_object_or_404(
+            RefrigeratorAccess,
+            user=request.user,
+            refrigerator_id=refrigerator_id,
+            role='owner'
+        )
+
+        member_access = get_object_or_404(
+            RefrigeratorAccess,
+            user_id=member_id,
+            refrigerator_id=refrigerator_id,
+            role='member'
+        )
+
+        member_access.delete()
+
+        return Response({"message": "Member has been removed from the refrigerator."}, status=200)
+
+
+class LeaveRefrigeratorView(APIView):
+    @extend_schema(
+        summary="냉장고 나가기",
+        description="멤버가 스스로 냉장고를 떠나는 API입니다.",
+        tags=['RefrigeratorInvitations'],
+        parameters=[],
+        responses={
+            200: {"message": "You have successfully left the refrigerator."},
+            403: {"message": "Owners cannot leave the refrigerator."},
+            404: {"message": "Refrigerator not found or you are not a member."}
+        },
+    )
+    def delete(self, request, refrigerator_id):
+        # 멤버 확인
+        member_access = get_object_or_404(
+            RefrigeratorAccess,
+            user=request.user,
+            refrigerator_id=refrigerator_id,
+            role='member'
+        )
+
+        # 멤버 삭제
+        member_access.delete()
+
+        return Response({"message": "You have successfully left the refrigerator."}, status=200)
 
 
 class RefrigeratorMemoView(APIView):

@@ -3,6 +3,13 @@ from refriges.models import Refrigerator, RefrigeratorAccess, RefrigeratorMemo, 
 
 
 class RefrigeratorSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Refrigerator
+        fields = ['id', 'name']
+
+
+class RefrigeratorMemberSerializer(serializers.ModelSerializer):
     owner = serializers.SerializerMethodField()
     member = serializers.SerializerMethodField()
 
