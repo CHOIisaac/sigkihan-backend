@@ -1,3 +1,5 @@
+from openai import OpenAI
+from decouple import config
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiParameter
@@ -318,3 +320,89 @@ class FoodHistoryView(APIView):
     #         for history in histories
     #     ]
     #     return Response(data, status=200)
+
+
+class FoodExpirationQueryView(APIView):
+    @extend_schema(
+        summary="식품 유통기한 조회",
+        description="ChatGPT를 사용하여 특정 식품의 평균 유통기한 정보를 반환합니다.",
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "조회할 식품의 이름",
+                        "example": "Milk"
+                    }
+                },
+                "required": ["name"],
+            }
+        },
+        responses={
+            200: {
+                "type": "object",
+                "properties": {
+                    "food_name": {
+                        "type": "string",
+                        "description": "조회된 식품 이름",
+                    },
+                    "expiration_info": {
+                        "type": "string",
+                        "description": "ChatGPT로부터 받은 유통기한 정보",
+                    },
+                },
+                "example": {
+                    "food_name": "Milk",
+                    "expiration_info": "Milk typically lasts 7-10 days in the refrigerator after opening."
+                },
+            },
+            400: {
+                "description": "식품 이름이 제공되지 않았을 때",
+                "content": {
+                    "application/json": {
+                        "example": {"error": "Food name is required."}
+                    }
+                },
+            },
+            500: {
+                "description": "ChatGPT API 호출 중 오류 발생",
+                "content": {
+                    "application/json": {
+                        "example": {"error": "Failed to fetch expiration info: API timeout"}
+                    }
+                },
+            },
+        },
+    )
+    def post(self, request):
+        """
+        ChatGPT를 사용하여 식품의 유통기한 정보를 가져오는 API
+        """
+        # 클라이언트로부터 식품 이름 가져오기
+        food_name = request.data.get('name')
+
+        if not food_name:
+            return Response({"error": "Food name is required."}, status=400)
+
+        # ChatGPT API 호출
+        try:
+            client = OpenAI(api_key=config("OPENAI_API_KEY"))  # 클라이언트 생성
+            completion = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are a food expiration expert."},
+                    {"role": "user", "content": f"What is the average expiration date of {food_name}?"}
+                ]
+            )
+
+            # ChatGPT의 응답에서 유통기한 정보 추출
+            expiration = completion.choices[0].message.content
+
+            return Response({
+                "food_name": food_name,
+                "expiration": expiration
+            }, status=200)
+
+        except Exception as e:
+            return Response({"error": f"Failed to fetch expiration info: {str(e)}"}, status=500)

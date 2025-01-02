@@ -141,13 +141,8 @@ class CreateNotificationAPIView(APIView):
         d_3_date = today + timedelta(days=3)
         foods_d_3 = FridgeFood.objects.filter(expiration_date=d_3_date)
         for food in foods_d_3:
-            print(food.name)
-            print(food.default_food)
-            print(food.default_food.id)
-            print(food.refrigerator)
             users = RefrigeratorAccess.objects.filter(refrigerator=refrigerator_id).values_list('user', flat=True)
             for user_id in users:
-                print(user_id)
                 Notification.objects.create(
                     user_id=user_id,
                     refrigerator=food.refrigerator,
