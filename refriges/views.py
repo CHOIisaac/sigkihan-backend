@@ -101,21 +101,76 @@ class RefrigeratorViewSet(viewsets.ViewSet):
         serializer = RefrigeratorSerializer(refrigerator)
         return Response(serializer.data, status=201)
 
-    # @action(detail=True, methods=["get"])
-    # @extend_schema(
-    #     summary="특정 냉장고 사용자 목록",
-    #     description="특정 냉장고에 접근 권한이 있는 사용자 목록을 반환합니다.",
-    #     tags=["Refrigerators"],
-    #     responses={200: "사용자 목록"}
-    # )
-    # def users(self, request, pk=None):
-    #     """
-    #     특정 냉장고 사용자 조회
-    #     """
-    #     refrigerator = get_object_or_404(Refrigerator, id=pk, access_list__user=request.user)
-    #     users = refrigerator.access_list.all()
-    #     user_data = [{"id": user.id, "name": user.name, "email": user.email} for user in users]
-    #     return Response(user_data, status=200)
+    @extend_schema(
+        summary="냉장고 수정",
+        description="특정 냉장고의 정보를 수정합니다. 이 작업은 소유자만 수행할 수 있습니다.",
+        tags=["Refrigerators"],
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {
+                    "refrigerator_name": {
+                        "type": "string",
+                        "example": "수정된 냉장고 이름",
+                        "description": "새로운 냉장고 이름 (선택사항)"
+                    },
+                    "description": {
+                        "type": "string",
+                        "example": "수정된 냉장고 설명",
+                        "description": "새로운 냉장고 설명 (선택사항)"
+                    }
+                }
+            }
+        },
+        responses={
+            200: RefrigeratorSerializer,
+            403: {"description": "소유자 권한이 필요합니다."},
+            404: {"description": "냉장고를 찾을 수 없습니다."}
+        }
+    )
+    def update(self, request, pk=None):
+        """
+        냉장고 수정
+        """
+        refrigerator = get_object_or_404(Refrigerator, id=pk)
+        access = get_object_or_404(RefrigeratorAccess, user=request.user, refrigerator=refrigerator)
+
+        if access.role != 'owner':
+            return Response({"error": "Only the owner can update the refrigerator."}, status=403)
+
+        refrigerator_name = request.data.get('refrigerator_name', refrigerator.name)
+        description = request.data.get('description', refrigerator.description)
+
+        refrigerator.name = refrigerator_name
+        refrigerator.description = description
+        refrigerator.save()
+
+        serializer = RefrigeratorSerializer(refrigerator)
+        return Response(serializer.data, status=200)
+
+    @extend_schema(
+        summary="냉장고 삭제",
+        description="특정 냉장고를 삭제합니다. 이 작업은 소유자만 수행할 수 있습니다.",
+        tags=["Refrigerators"],
+        responses={
+            204: {"description": "냉장고 삭제 성공"},
+            403: {"description": "소유자 권한이 필요합니다."},
+            404: {"description": "냉장고를 찾을 수 없습니다."}
+        }
+    )
+    def destroy(self, request, pk=None):
+        """
+        냉장고 삭제
+        """
+        refrigerator = get_object_or_404(Refrigerator, id=pk)
+        access = get_object_or_404(RefrigeratorAccess, user=request.user, refrigerator=refrigerator)
+
+        if access.role != 'owner':
+            return Response({"error": "Only the owner can delete the refrigerator."}, status=403)
+
+        refrigerator.delete()
+        return Response({"message": "Refrigerator deleted successfully."}, status=204)
+
 
 class RefrigeratorInvitationView(APIView):
     """
@@ -129,7 +184,7 @@ class RefrigeratorInvitationView(APIView):
         # parameters=[
         #     OpenApiParameter(name="refrigerator_id", description="냉장고 ID", required=True, type=int)
         # ],
-        tags=["RefrigeratorInvitations"],
+        tags=["Invitations"],
         request={
             "application/json": {
                 "type": "object",
@@ -173,7 +228,7 @@ class InvitationStatusUpdateView(APIView):
         # parameters=[
         #     OpenApiParameter(name="invite_id", description="초대 ID", required=True, type=int)
         # ],
-        tags=["RefrigeratorInvitations"],
+        tags=["Invitations"],
         request={
             "application/json": {
                 "type": "object",
@@ -218,7 +273,7 @@ class InvitationListView(APIView):
     @extend_schema(
         summary="초대 목록 조회",
         description="사용자가 받은 초대 목록을 반환합니다. 초대 상태가 'pending'인 초대만 조회됩니다.",
-        tags=["RefrigeratorInvitations"],
+        tags=["Invitations"],
         responses={200: RefrigeratorInvitationSerializer(many=True)}
     )
     def get(self, request):
@@ -239,7 +294,7 @@ class RemoveMemberView(APIView):
     @extend_schema(
         summary="냉장고 멤버 추방",
         description="오너가 특정 멤버를 냉장고에서 추방합니다.",
-        tags=['RefrigeratorInvitations'],
+        tags=['Invitations'],
         parameters=[],
         responses={
             200: {"message": "Member has been removed from the refrigerator."},
@@ -271,7 +326,7 @@ class LeaveRefrigeratorView(APIView):
     @extend_schema(
         summary="냉장고 나가기",
         description="멤버가 스스로 냉장고를 떠나는 API입니다.",
-        tags=['RefrigeratorInvitations'],
+        tags=['Invitations'],
         parameters=[],
         responses={
             200: {"message": "You have successfully left the refrigerator."},
@@ -298,9 +353,9 @@ class RefrigeratorMemoView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        summary="냉장고 메모 추가",
+        summary="메모 추가",
         description="특정 냉장고에 메모를 추가합니다.",
-        tags=["RefrigeratorMemos"],
+        tags=["Memos"],
         # parameters=[
         #     OpenApiParameter(name="refrigerator_id", description="냉장고 ID", required=True, type=int)
         # ],
@@ -342,9 +397,9 @@ class RefrigeratorMemoView(APIView):
         return Response(serializer.data, status=201)
 
     @extend_schema(
-        summary="냉장고 메모 조회",
+        summary="메모 조회",
         description="특정 냉장고의 메모를 최신순으로 조회합니다.",
-        tags=["RefrigeratorMemos"],
+        tags=["Memos"],
         responses={200: RefrigeratorMemoSerializer(many=True)}
     )
     def get(self, request, refrigerator_id):
@@ -368,7 +423,7 @@ class RefrigeratorMemoDetailView(APIView):
     @extend_schema(
         summary="메모 수정",
         description="사용자가 작성한 메모를 수정합니다.",
-        tags=["RefrigeratorMemos"],
+        tags=["Memos"],
         request={
             "application/json": {
                 "type": "object",
@@ -398,7 +453,7 @@ class RefrigeratorMemoDetailView(APIView):
     @extend_schema(
         summary="메모 삭제",
         description="사용자가 작성한 메모를 삭제합니다.",
-        tags=["RefrigeratorMemos"],
+        tags=["Memos"],
         responses={204: {"description": "메모 삭제 성공"}}
     )
     def delete(self, request, refrigerator_id, memo_id):

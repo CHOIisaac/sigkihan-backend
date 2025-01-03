@@ -84,8 +84,8 @@ SPECTACULAR_SETTINGS = {
     'TAGS': [
             {'name': 'Users', 'description': 'User-related operations'},
             {'name': 'Refrigerators', 'description': 'Refrigerator management'},
-            {'name': 'RefrigeratorMemos', 'description': 'RefrigeratorMemos management'},
-            {'name': 'RefrigeratorInvitations', 'description': 'RefrigeratorInvitations management'},
+            {'name': 'Memos', 'description': 'RefrigeratorMemos management'},
+            {'name': 'Invitations', 'description': 'RefrigeratorInvitations management'},
             {'name': 'Foods', 'description': 'Food-related operations'},
             {'name': 'Notifications', 'description': 'Notification-related operations'},
             {'name': 'Tests', 'description': 'API Test'},
