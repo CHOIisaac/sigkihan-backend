@@ -94,7 +94,7 @@ class UserDetailAPIView(APIView):
             }
         }
     )
-    def put(self, request, id):
+    def patch(self, request, id):
         try:
             print("Request data:", request.data)  # 디버깅용
             user = get_object_or_404(CustomUser, pk=id)

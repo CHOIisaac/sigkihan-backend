@@ -128,9 +128,9 @@ class RefrigeratorViewSet(viewsets.ViewSet):
             404: {"description": "냉장고를 찾을 수 없습니다."}
         }
     )
-    def update(self, request, pk=None):
+    def partial_update(self, request, pk=None):
         """
-        냉장고 수정
+        PUT: 냉장고 전체 수정
         """
         refrigerator = get_object_or_404(Refrigerator, id=pk)
         access = get_object_or_404(RefrigeratorAccess, user=request.user, refrigerator=refrigerator)
@@ -138,8 +138,12 @@ class RefrigeratorViewSet(viewsets.ViewSet):
         if access.role != 'owner':
             return Response({"error": "Only the owner can update the refrigerator."}, status=403)
 
-        refrigerator_name = request.data.get('refrigerator_name', refrigerator.name)
-        description = request.data.get('description', refrigerator.description)
+        # 전체 필드 업데이트
+        refrigerator_name = request.data.get('refrigerator_name')
+        description = request.data.get('description')
+
+        if not refrigerator_name:
+            return Response({"error": "Refrigerator name is required."}, status=400)
 
         refrigerator.name = refrigerator_name
         refrigerator.description = description
@@ -147,6 +151,7 @@ class RefrigeratorViewSet(viewsets.ViewSet):
 
         serializer = RefrigeratorSerializer(refrigerator)
         return Response(serializer.data, status=200)
+
 
     @extend_schema(
         summary="냉장고 삭제",
