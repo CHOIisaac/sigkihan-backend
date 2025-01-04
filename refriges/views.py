@@ -12,6 +12,7 @@ from users.models import CustomUser
 
 class RefrigeratorViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
+    lookup_field = 'refrigerator_id'
 
     @extend_schema(
         summary="냉장고 목록 조회",
