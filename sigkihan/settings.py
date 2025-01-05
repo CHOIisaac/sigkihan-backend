@@ -85,7 +85,7 @@ SPECTACULAR_SETTINGS = {
             {'name': 'Users', 'description': 'User-related operations'},
             {'name': 'Refrigerators', 'description': 'Refrigerator management'},
             {'name': 'Memos', 'description': 'RefrigeratorMemos management'},
-            {'name': 'Invitations', 'description': 'RefrigeratorInvitations management'},
+            {'name': 'Members', 'description': 'Members management'},
             {'name': 'Foods', 'description': 'Food-related operations'},
             {'name': 'Notifications', 'description': 'Notification-related operations'},
             {'name': 'Tests', 'description': 'API Test'},

@@ -190,7 +190,7 @@ class RefrigeratorInvitationView(APIView):
         # parameters=[
         #     OpenApiParameter(name="refrigerator_id", description="냉장고 ID", required=True, type=int)
         # ],
-        tags=["Invitations"],
+        tags=["Members"],
         request={
             "application/json": {
                 "type": "object",
@@ -234,7 +234,7 @@ class InvitationStatusUpdateView(APIView):
         # parameters=[
         #     OpenApiParameter(name="invite_id", description="초대 ID", required=True, type=int)
         # ],
-        tags=["Invitations"],
+        tags=["Members"],
         request={
             "application/json": {
                 "type": "object",
@@ -279,7 +279,7 @@ class InvitationListView(APIView):
     @extend_schema(
         summary="초대 목록 조회",
         description="사용자가 받은 초대 목록을 반환합니다. 초대 상태가 'pending'인 초대만 조회됩니다.",
-        tags=["Invitations"],
+        tags=["Members"],
         responses={200: RefrigeratorInvitationSerializer(many=True)}
     )
     def get(self, request):
@@ -300,7 +300,7 @@ class RemoveMemberView(APIView):
     @extend_schema(
         summary="냉장고 멤버 추방",
         description="오너가 특정 멤버를 냉장고에서 추방합니다.",
-        tags=['Invitations'],
+        tags=["Members"],
         parameters=[],
         responses={
             200: {"message": "Member has been removed from the refrigerator."},
@@ -332,7 +332,7 @@ class LeaveRefrigeratorView(APIView):
     @extend_schema(
         summary="냉장고 나가기",
         description="멤버가 스스로 냉장고를 떠나는 API입니다.",
-        tags=['Invitations'],
+        tags=["Members"],
         parameters=[],
         responses={
             200: {"message": "You have successfully left the refrigerator."},
