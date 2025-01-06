@@ -82,10 +82,10 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,  # Schema를 API 엔드포인트로 제공하지 않음
     'TAGS': [
-            {'name': 'Users', 'description': 'User-related operations'},
+            {'name': 'Users', 'description': 'User management'},
             {'name': 'Refrigerators', 'description': 'Refrigerator management'},
             {'name': 'Memos', 'description': 'RefrigeratorMemos management'},
-            {'name': 'Members', 'description': 'Members management'},
+            {'name': 'Members', 'description': 'Members-related operations'},
             {'name': 'Foods', 'description': 'Food-related operations'},
             {'name': 'Notifications', 'description': 'Notification-related operations'},
             {'name': 'Tests', 'description': 'API Test'},
