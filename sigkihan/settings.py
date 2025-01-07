@@ -88,6 +88,7 @@ SPECTACULAR_SETTINGS = {
             {'name': 'Members', 'description': 'Members-related operations'},
             {'name': 'Foods', 'description': 'Food-related operations'},
             {'name': 'Notifications', 'description': 'Notification-related operations'},
+            {'name': 'Openai', 'description': 'ChatGPT-related operations'},
             {'name': 'Tests', 'description': 'API Test'},
         ],
     'SECURITY': [

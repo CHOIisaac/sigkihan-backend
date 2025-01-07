@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from openai import OpenAI
 from decouple import config
 from django.http import Http404
@@ -13,6 +15,8 @@ from refriges.models import Refrigerator, RefrigeratorAccess
 from .models import DefaultFood, FridgeFood, FoodHistory
 from .serializers import DefaultFoodSerializer, FridgeFoodSerializer
 
+
+today = datetime.today().strftime('%Y-%m-%d')
 
 @extend_schema(
     summary="디폴트 음식 조회",
@@ -326,6 +330,7 @@ class FoodExpirationQueryView(APIView):
     @extend_schema(
         summary="식품 유통기한 조회",
         description="ChatGPT를 사용하여 특정 식품의 평균 유통기한 정보를 반환합니다.",
+        tags=["Openai"],
         request={
             "application/json": {
                 "type": "object",
@@ -389,10 +394,28 @@ class FoodExpirationQueryView(APIView):
         try:
             client = OpenAI(api_key=config("OPENAI_API_KEY"))  # 클라이언트 생성
             completion = client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": "You are a food expiration expert."},
-                    {"role": "user", "content": f"What is the average expiration date of {food_name}?"}
+                    {
+                        "role": "system",
+                        "content": (
+                            "당신은 식품 소비기한 전문가입니다. "
+                            "소비기한을 알려줄 때는 반드시 다음 형식으로만 답변하세요: "
+                            "'yyyy년 mm월 dd일까지 드시는 걸 추천해요!' "
+                            "어떠한 추가 정보도 포함하지 마세요."
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": f"""
+                            소비기한을 알려줄 때는 반드시 다음 형식으로만 답변하세요.
+                            {food_name}은 yyyy년 mm월 dd일까지 드시는 걸 추천해요!
+
+                            제품명: {food_name}
+                            제조일자: {today}
+                            소비기한을 위 형식으로 추천해주세요.
+                        """
+                    }
                 ]
             )
 
