@@ -186,7 +186,7 @@ class RefrigeratorInvitationView(APIView):
 
 
     @extend_schema(
-        summary="냉장고 초대 생성",
+        summary="냉장고 초대 코드 생성",
         description="특정 냉장고에 초대 코드를 생성합니다. 요청자는 냉장고 소유자여야 합니다.",
         parameters=[
             OpenApiParameter(
