@@ -15,7 +15,7 @@ class FridgeFoodSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
     class Meta:
         model = FridgeFood
-        fields = ['id', 'name', 'default_food_name', 'purchase_date', 'expiration_date', 'quantity', 'image_url']
+        fields = ['id', 'name', 'default_food_name', 'storage_type', 'storage_type_display', 'purchase_date', 'expiration_date', 'quantity', 'image_url']
 
     # @extend_schema_field(serializers.CharField)
     # def get_name(self, obj) -> str:

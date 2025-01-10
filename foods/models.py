@@ -16,6 +16,11 @@ class DefaultFood(models.Model):
 
 
 class FridgeFood(models.Model):
+    STORAGE_TYPE_CHOICES = [
+        ('refrigerated', '냉장'),
+        ('frozen', '냉동'),
+        ('room_temp', '실온'),
+    ]
     refrigerator = models.ForeignKey(
         'refriges.Refrigerator', on_delete=models.CASCADE, related_name='refrigerator_foods', verbose_name='냉장고'
     )
@@ -23,6 +28,12 @@ class FridgeFood(models.Model):
         'DefaultFood', on_delete=models.CASCADE, null=True, blank=True, related_name='default_foods', verbose_name='기본 식품'
     )
     name = models.CharField(max_length=100, null=True, blank=True, verbose_name="사용자 정의 식품 이름")
+    storage_type = models.CharField(
+        max_length=20,
+        choices=STORAGE_TYPE_CHOICES,
+        default='refrigerated',
+        verbose_name="보관 방식"
+    )
     purchase_date = models.DateField(verbose_name='구매 날짜')
     expiration_date = models.DateField(verbose_name='소비기한')
     quantity = models.PositiveIntegerField(default=1, verbose_name='수량')
