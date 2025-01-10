@@ -1,3 +1,5 @@
+import secrets
+
 from django.db import models
 from django.db.models import UniqueConstraint
 
@@ -51,6 +53,7 @@ class RefrigeratorInvitation(models.Model):
     refrigerator = models.ForeignKey(
         Refrigerator, on_delete=models.CASCADE, related_name='invitations', verbose_name="냉장고"
     )
+    code = models.CharField(max_length=50, unique=True, default=secrets.token_urlsafe(16), verbose_name="초대 코드")
     status = models.CharField(
         max_length=10, choices=STATUS_CHOICES, default='pending', verbose_name="초대 상태"
     )
