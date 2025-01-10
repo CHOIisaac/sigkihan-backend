@@ -184,33 +184,53 @@ class RefrigeratorInvitationView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
+
     @extend_schema(
         summary="냉장고 초대 생성",
-        description="특정 냉장고에 사용자를 초대합니다. 초대하려면 요청자가 냉장고 소유자여야 합니다.",
-        # parameters=[
-        #     OpenApiParameter(name="refrigerator_id", description="냉장고 ID", required=True, type=int)
-        # ],
+        description="특정 냉장고에 초대 코드를 생성합니다. 요청자는 냉장고 소유자여야 합니다.",
+        parameters=[
+            OpenApiParameter(
+                name="refrigerator_id",
+                location=OpenApiParameter.PATH,
+                description="초대할 냉장고의 ID",
+                required=True,
+                type=int
+            )
+        ],
         tags=["Members"],
-        request={
-            "application/json": {
-                "type": "object",
-                "properties": {
-                    "email": {"type": "string", "example": "admin2@admin.com", "description": "초대할 사용자 ID"}
-                },
-                "required": ["invited_user_id"]
-            }
-        },
         responses={
-            201: {"description": "Invitation sent successfully."},
-            403: {"description": "You are not the owner of this refrigerator."},
-            404: {"description": "Refrigerator or invited user not found."},
-        }
+            201: OpenApiResponse(
+                description="초대 코드가 성공적으로 생성되었습니다.",
+                examples={
+                    "application/json": {
+                        "invitation_code": "abc123xyz456",
+                        "message": "Invitation sent successfully."
+                    }
+                }
+            ),
+            403: OpenApiResponse(
+                description="요청자가 냉장고의 소유자가 아님",
+                examples={
+                    "application/json": {
+                        "error": "You are not the owner of this refrigerator."
+                    }
+                }
+            ),
+            404: OpenApiResponse(
+                description="냉장고를 찾을 수 없음",
+                examples={
+                    "application/json": {
+                        "error": "Refrigerator not found."
+                    }
+                }
+            ),
+        },
     )
     def post(self, request, refrigerator_id):
         inviter = request.user
-        invitee_email = request.data.get('email')
-        if not invitee_email:
-            return Response({"error": "이메일을 확인해주세요."}, status=400)
+        # invitee_email = request.data.get('email')
+        # if not invitee_email:
+        #     return Response({"error": "이메일을 확인해주세요."}, status=400)
 
         # 냉장고 접근 확인
         refrigerator = get_object_or_404(Refrigerator, pk=refrigerator_id)
@@ -218,8 +238,12 @@ class RefrigeratorInvitationView(APIView):
             return Response({"error": "You are not the owner of this refrigerator."}, status=403)
 
         # 초대 생성
-        invitation = create_invitation(inviter, invitee_email, refrigerator)
-        return Response({"invitation_id": invitation.id, "message": "Invitation sent successfully."}, status=201)
+        invitation = RefrigeratorInvitation.objects.create(
+            refrigerator=refrigerator,
+            inviter=inviter,
+        )
+
+        return Response({"invitation_code": invitation.code, "message": "Invitation sent successfully."}, status=201)
 
 
 class InvitationStatusUpdateView(APIView):
@@ -230,45 +254,94 @@ class InvitationStatusUpdateView(APIView):
 
     @extend_schema(
         summary="초대 상태 업데이트",
-        description="사용자가 받은 초대의 상태를 수락(accepted) 또는 거절(declined)로 변경합니다.",
-        # parameters=[
-        #     OpenApiParameter(name="invite_id", description="초대 ID", required=True, type=int)
-        # ],
+        description=(
+                "사용자가 받은 초대의 상태를 수락(accepted) 또는 거절(declined)로 변경합니다. "
+                "초대 코드는 URL 경로로 전달됩니다."
+        ),
         tags=["Members"],
+        parameters=[
+            OpenApiParameter(
+                name="invitation_code",
+                location=OpenApiParameter.PATH,
+                description="초대 코드",
+                required=True,
+                type=str,
+                examples=[
+                    OpenApiExample(
+                        name="Example Invitation Code",
+                        value="abc123xyz456",
+                        summary="초대 코드 예시",
+                        description="초대 상태를 업데이트하기 위한 초대 코드"
+                    )
+                ]
+            )
+        ],
         request={
             "application/json": {
                 "type": "object",
                 "properties": {
-                    "status": {"type": "string", "enum": ["accepted", "declined"], "example": "accepted"}
+                    "status": {
+                        "type": "string",
+                        "enum": ["accepted", "declined"],
+                        "example": "accepted",
+                        "description": "초대 상태 (수락 또는 거절)"
+                    }
                 },
                 "required": ["status"]
             }
         },
         responses={
-            200: {"description": "Invitation accepted or declined."},
-            400: {"description": "Invalid status."},
-            404: {"description": "Invitation not found."},
-        }
+            200: OpenApiResponse(
+                description="초대 상태가 성공적으로 업데이트되었습니다.",
+                examples={
+                    "application/json": {
+                        "message": "Invitation accepted."
+                    }
+                }
+            ),
+            400: OpenApiResponse(
+                description="잘못된 상태 또는 초대 코드가 제공되지 않음.",
+                examples={
+                    "application/json": {
+                        "error": "Invalid status."
+                    }
+                }
+            ),
+            404: OpenApiResponse(
+                description="초대를 찾을 수 없음.",
+                examples={
+                    "application/json": {
+                        "error": "Invitation not found."
+                    }
+                }
+            ),
+        },
     )
-    def patch(self, request, invite_id):
-        invite = get_object_or_404(RefrigeratorInvitation, pk=invite_id, invitee_email=request.user.email)
-        status_value = request.data.get('status')
+    def post(self, request, invitation_code):
+        invitation_status = request.data.get('status')
+        if not invitation_code:
+            return Response({"error": "Invitation code is required."}, status=400)
 
-        if status_value not in ['accepted', 'declined']:
-            return Response({"error": "Invalid status."}, status=400)
+        # 초대 확인
+        invitation = get_object_or_404(RefrigeratorInvitation, code=invitation_code)
 
-        invite.status = status_value
-        invite.save()
+        if invitation.status != 'pending':
+            return Response({"error": "This invitation is no longer valid."}, status=400)
 
-        if status_value == 'accepted':
+        # 초대 수락 처리
+        if invitation_status == 'accepted':
+            invitation.status = invitation_status
+            invitation.invitee_email = request.user.email
+            invitation.save()
+
+            # 냉장고 멤버로 추가
             RefrigeratorAccess.objects.create(
                 user=request.user,
-                refrigerator=invite.refrigerator,
+                refrigerator=invitation.refrigerator,
                 role='member'
             )
-            return Response({"message": "Invitation accepted. Access granted to refrigerator."}, status=200)
 
-        return Response({"message": "Invitation declined."}, status=200)
+        return Response({"message": "Invitation accepted."}, status=200)
 
 
 class InvitationListView(APIView):

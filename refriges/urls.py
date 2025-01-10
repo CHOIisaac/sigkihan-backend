@@ -20,7 +20,7 @@ router.register('refrigerators', RefrigeratorViewSet, basename='refrigerators')
 urlpatterns = [
     # 초대 생성 API
     path('refrigerators/<int:refrigerator_id>/invitations', RefrigeratorInvitationView.as_view(), name='refrigerator-invite'),
-    path('refrigerators/invitations/<int:invite_id>', InvitationStatusUpdateView.as_view(), name='invitation-status-update'),
+    path('refrigerators/invitations/<str:invitation_code>', InvitationStatusUpdateView.as_view(), name='invitation-status-update'),
     path('refrigerators/invitations', InvitationListView.as_view(), name='invitation-list'),
     # 초대된 멤버 내보내기
     path('refrigerators/<int:refrigerator_id>/members/<int:member_id>', RemoveMemberView.as_view(), name='remove-member'),
