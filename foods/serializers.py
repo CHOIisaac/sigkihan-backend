@@ -13,6 +13,11 @@ class FridgeFoodSerializer(serializers.ModelSerializer):
     # name = serializers.SerializerMethodField()
     default_food_name = serializers.CharField(source="default_food.name", read_only=True)
     image_url = serializers.SerializerMethodField()
+    storage_type_display = serializers.CharField(
+        source='get_storage_type_display',
+        read_only=True
+    )
+
     class Meta:
         model = FridgeFood
         fields = ['id', 'name', 'default_food_name', 'storage_type', 'storage_type_display', 'purchase_date', 'expiration_date', 'quantity', 'image_url']

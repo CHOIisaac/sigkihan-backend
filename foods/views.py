@@ -4,7 +4,7 @@ from openai import OpenAI
 from decouple import config
 from django.http import Http404
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiParameter
+from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiParameter, OpenApiResponse
 from rest_framework.generics import ListAPIView, UpdateAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -101,22 +101,88 @@ class FridgeFoodViewSet(viewsets.ViewSet):
 
     @extend_schema(
         summary="음식 추가",
-        description="냉장고에 기본 제공 음식 또는 사용자 정의 음식을 추가합니다.",
+        description="냉장고에 기본 제공 음식 또는 사용자 정의 음식을 추가합니다. 디폴트 음식 ID가 없는 경우 사용자 정의 음식을 추가해야 합니다.",
         tags=["Foods"],
+        parameters=[
+            OpenApiParameter(
+                name="refrigerator_id",
+                location=OpenApiParameter.PATH,
+                description="냉장고 ID",
+                required=True,
+                type=int,
+                examples=[
+                    OpenApiExample(
+                        name="Refrigerator ID Example",
+                        value=1,
+                        summary="냉장고 ID",
+                        description="음식을 추가할 냉장고 ID"
+                    )
+                ]
+            )
+        ],
         request={
             "application/json": {
                 "type": "object",
                 "properties": {
-                    "default_food_id": {"type": "integer", "example": 1, "description": "디폴트 음식 ID"},
-                    "name": {"type": "string", "example": "수박", "description": "사용자 정의 음식 이름"},
-                    "purchase_date": {"type": "string", "format": "date", "example": "2024-12-01", "description": "구매 날짜"},
-                    "expiration_date": {"type": "string", "format": "date", "example": "2024-12-10", "description": "소비기한"},
-                    "quantity": {"type": "integer", "example": 2, "description": "수량"}
+                    "default_food_id": {
+                        "type": "integer",
+                        "example": 1,
+                        "description": "디폴트 음식 ID (선택사항)"
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "수박",
+                        "description": "사용자 정의 음식 이름 (선택사항, default_food_id가 없는 경우 필수)"
+                    },
+                    "storage_type": {
+                        "type": "string",
+                        "enum": ["refrigerated", "frozen", "room_temp"],
+                        "example": "refrigerated",
+                        "description": "음식 보관 방식 (냉장, 냉동, 실온)"
+                    },
+                    "purchase_date": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2024-12-01",
+                        "description": "구매 날짜"
+                    },
+                    "expiration_date": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2024-12-10",
+                        "description": "소비기한"
+                    },
+                    "quantity": {
+                        "type": "integer",
+                        "example": 2,
+                        "description": "수량"
+                    }
                 },
                 "required": ["purchase_date", "expiration_date", "quantity"]
             }
         },
-        responses={201: FridgeFoodSerializer, 400: {"description": "잘못된 요청"}}
+        responses={
+            201: OpenApiResponse(
+                description="음식 추가 성공",
+                response=FridgeFoodSerializer
+            ),
+            400: OpenApiResponse(
+                description="잘못된 요청",
+                examples={
+                    "application/json": {
+                        "error": "Purchase date, expiration date, and quantity are required."
+                    }
+                }
+            ),
+            404: OpenApiResponse(
+                description="리소스가 존재하지 않음",
+                examples={
+                    "application/json": {
+                        "error": "Refrigerator not found."
+                    }
+                }
+            )
+        }
     )
     def create(self, request, refrigerator_id):
         """
@@ -127,6 +193,7 @@ class FridgeFoodViewSet(viewsets.ViewSet):
         purchase_date = request.data.get('purchase_date')
         expiration_date = request.data.get('expiration_date')
         quantity = request.data.get('quantity')
+        storage_type = request.data.get('storage_type')
 
         if not all([purchase_date, expiration_date, quantity]):
             return Response({"error": "Purchase date, expiration date, and quantity are required."}, status=400)
@@ -144,6 +211,7 @@ class FridgeFoodViewSet(viewsets.ViewSet):
                 refrigerator=refrigerator,
                 name=name,
                 default_food=default_food,
+                storage_type=storage_type,
                 purchase_date=purchase_date,
                 expiration_date=expiration_date,
                 quantity=quantity
@@ -153,6 +221,7 @@ class FridgeFoodViewSet(viewsets.ViewSet):
                 refrigerator=refrigerator,
                 name=name,
                 default_food_id=30,
+                storage_type=storage_type,
                 purchase_date=purchase_date,
                 expiration_date=expiration_date,
                 quantity=quantity
@@ -186,12 +255,12 @@ class FridgeFoodViewSet(viewsets.ViewSet):
         if not food:
             return Response({"error": "Food not found."}, status=404)
 
-        if food.default_food:
+        if food.default_food.id == 30:
+            food.name = request.data.get('name', food.name)
             food.purchase_date = request.data.get('purchase_date', food.purchase_date)
             food.expiration_date = request.data.get('expiration_date', food.expiration_date)
             food.quantity = request.data.get('quantity', food.quantity)
         else:
-            food.name = request.data.get('name', food.name)
             food.purchase_date = request.data.get('purchase_date', food.purchase_date)
             food.expiration_date = request.data.get('expiration_date', food.expiration_date)
             food.quantity = request.data.get('quantity', food.quantity)

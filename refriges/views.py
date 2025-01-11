@@ -37,11 +37,11 @@ class RefrigeratorViewSet(viewsets.ViewSet):
             404: {"description": "냉장고를 찾을 수 없습니다."}
         }
     )
-    def retrieve(self, request, pk=None):
+    def retrieve(self, request, refrigerator_id=None):
         """
         특정 냉장고 조회
         """
-        refrigerator = get_object_or_404(Refrigerator, id=pk, access_list__user=request.user)
+        refrigerator = get_object_or_404(Refrigerator, id=refrigerator_id, access_list__user=request.user)
         serializer = RefrigeratorMemberSerializer(refrigerator)
         return Response(serializer.data, status=200)
 
@@ -129,11 +129,11 @@ class RefrigeratorViewSet(viewsets.ViewSet):
             404: {"description": "냉장고를 찾을 수 없습니다."}
         }
     )
-    def partial_update(self, request, pk=None):
+    def partial_update(self, request, refrigerator_id=None):
         """
         PUT: 냉장고 전체 수정
         """
-        refrigerator = get_object_or_404(Refrigerator, id=pk)
+        refrigerator = get_object_or_404(Refrigerator, id=refrigerator_id)
         access = get_object_or_404(RefrigeratorAccess, user=request.user, refrigerator=refrigerator)
 
         if access.role != 'owner':
