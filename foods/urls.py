@@ -1,7 +1,8 @@
 from rest_framework.routers import DefaultRouter
 from django.urls import path
 
-from foods.views import DefaultFoodListView, FridgeFoodViewSet, FoodHistoryView, FoodExpirationQueryView
+from foods.views import DefaultFoodListView, FridgeFoodViewSet, FoodHistoryView, FoodExpirationQueryView, \
+    RefrigeratorStatisticsView
 
 
 class NoSlashRouter(DefaultRouter):
@@ -23,4 +24,7 @@ urlpatterns = [
     path('refrigerators/<int:refrigerator_id>/foods/<int:id>', FridgeFoodViewSet.as_view({'patch': 'partial_update', 'delete': 'destroy'}), name='fridge-food-detail'),
     path('refrigerators/<int:refrigerator_id>/foods/<int:id>/history', FoodHistoryView.as_view(), name='food-history'),
     path('food/expiration-query/', FoodExpirationQueryView.as_view(), name='food-expiration-query'),
-] + router.urls
+    path('refrigerators/<int:refrigerator_id>/statistics/', RefrigeratorStatisticsView.as_view(),
+    name='refrigerator-statistics'),
+
+              ] + router.urls

@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from django.db.models import Sum
 from openai import OpenAI
 from decouple import config
 from django.http import Http404
@@ -351,6 +352,7 @@ class FoodHistoryView(APIView):
             FoodHistory.objects.create(
                 food_name=fridge_food.name or fridge_food.default_food,
                 user=request.user,
+                fridge_food=fridge_food,
                 action=action,
                 quantity=quantity
             )
@@ -498,3 +500,45 @@ class FoodExpirationQueryView(APIView):
 
         except Exception as e:
             return Response({"error": f"Failed to fetch expiration info: {str(e)}"}, status=500)
+
+
+class RefrigeratorStatisticsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, refrigerator_id):
+        """
+        특정 냉장고에서 소비 및 폐기 통계를 반환
+        """
+        # 냉장고 존재 여부 확인
+        refrigerator = get_object_or_404(Refrigerator, id=refrigerator_id)
+
+        # 현재 사용자가 접근 권한이 있는 냉장고인지 확인
+        if not refrigerator.access_list.filter(user=request.user).exists():
+            return Response({"error": "You do not have access to this refrigerator."}, status=403)
+
+        # 행동별 통계 계산 (냉장고 전체)
+        stats = FoodHistory.objects.filter(
+            fridge_food__refrigerator=refrigerator
+        ).values('action').annotate(
+            total_quantity=Sum('quantity')
+        )
+
+        # 데이터 구조화
+        data = {
+            "refrigerator": {
+                "id": refrigerator.id,
+                "name": refrigerator.name,
+            },
+            "statistics": {
+                "consumed": 0,
+                "discarded": 0,
+            }
+        }
+
+        for stat in stats:
+            action = stat['action']
+            total_quantity = stat['total_quantity']
+            if action in data['statistics']:
+                data['statistics'][action] = total_quantity
+
+        return Response(data, status=200)
