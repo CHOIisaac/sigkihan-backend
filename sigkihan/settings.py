@@ -87,8 +87,10 @@ SPECTACULAR_SETTINGS = {
             {'name': 'Memos', 'description': 'RefrigeratorMemos management'},
             {'name': 'Members', 'description': 'Members-related operations'},
             {'name': 'Foods', 'description': 'Food-related operations'},
+            {'name': 'Food Statistics', 'description': 'FoodsStatistics-related operations'},
             {'name': 'Notifications', 'description': 'Notification-related operations'},
             {'name': 'Openai', 'description': 'ChatGPT-related operations'},
+            {'name': 'Auth', 'description': 'Login-related operations'},
             {'name': 'Tests', 'description': 'API Test'},
         ],
     'SECURITY': [

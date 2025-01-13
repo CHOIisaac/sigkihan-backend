@@ -24,7 +24,5 @@ urlpatterns = [
     path('refrigerators/<int:refrigerator_id>/foods/<int:id>', FridgeFoodViewSet.as_view({'patch': 'partial_update', 'delete': 'destroy'}), name='fridge-food-detail'),
     path('refrigerators/<int:refrigerator_id>/foods/<int:id>/history', FoodHistoryView.as_view(), name='food-history'),
     path('food/expiration-query/', FoodExpirationQueryView.as_view(), name='food-expiration-query'),
-    path('refrigerators/<int:refrigerator_id>/statistics/', RefrigeratorStatisticsView.as_view(),
-    name='refrigerator-statistics'),
-
-              ] + router.urls
+    path('refrigerators/<int:refrigerator_id>/statistics', RefrigeratorStatisticsView.as_view(), name='refrigerator-statistics'),
+            ] + router.urls

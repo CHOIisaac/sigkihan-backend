@@ -505,6 +505,69 @@ class FoodExpirationQueryView(APIView):
 class RefrigeratorStatisticsView(APIView):
     permission_classes = [IsAuthenticated]
 
+
+    @extend_schema(
+        summary="냉장고 식품 소비 및 폐기 통계",
+        description=(
+            "특정 냉장고에서 소비 및 폐기된 항목과 각각의 총 수량을 반환합니다. "
+            "냉장고에 접근 권한이 있어야 조회할 수 있습니다."
+        ),
+        tags=["Food Statistics"],
+        parameters=[
+            OpenApiParameter(
+                name="refrigerator_id",
+                location=OpenApiParameter.PATH,
+                description="냉장고 ID",
+                required=True,
+                type=int,
+                examples=[
+                    OpenApiExample(
+                        name="냉장고 예시 ID",
+                        value=1,
+                        summary="냉장고 ID 예시",
+                        description="통계를 조회할 냉장고의 ID"
+                    )
+                ]
+            )
+        ],
+        responses={
+            200: OpenApiResponse(
+                description="소비 및 폐기된 항목과 수량 반환 성공",
+                examples={
+                    "application/json": {
+                        "refrigerator": {
+                            "id": 1,
+                            "name": "우리집 냉장고"
+                        },
+                        "consumed_items": [
+                            {"food_name": "사과", "total_quantity": 5},
+                            {"food_name": "바나나", "total_quantity": 2}
+                        ],
+                        "discarded_items": [
+                            {"food_name": "우유", "total_quantity": 1},
+                            {"food_name": "치즈", "total_quantity": 3}
+                        ]
+                    }
+                }
+            ),
+            403: OpenApiResponse(
+                description="접근 권한이 없는 냉장고",
+                examples={
+                    "application/json": {
+                        "error": "You do not have access to this refrigerator."
+                    }
+                }
+            ),
+            404: OpenApiResponse(
+                description="냉장고를 찾을 수 없음",
+                examples={
+                    "application/json": {
+                        "error": "Refrigerator not found."
+                    }
+                }
+            )
+        }
+    )
     def get(self, request, refrigerator_id):
         """
         특정 냉장고에서 소비 및 폐기된 항목 반환

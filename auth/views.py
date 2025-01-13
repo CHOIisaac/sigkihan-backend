@@ -44,6 +44,7 @@ class KakaoLoginView(APIView):
             "카카오 로그인을 위해 프론트엔드에서 받은 authorization_code를 사용하여 "
             "카카오 사용자 정보를 가져오고, JWT 토큰을 발급합니다."
         ),
+        tags=['Auth'],
         request=KakaoLoginRequestSerializer,  # 요청 직렬화기
         responses={200: KakaoLoginResponseSerializer},  # 응답 직렬화기
     )
@@ -210,6 +211,7 @@ class SuperUserLoginView(APIView):
     @extend_schema(
         summary="슈퍼유저 로그인",
         description="슈퍼유저 이메일과 비밀번호를 입력하여 JWT를 발급받습니다.",
+        tags=['Auth'],
         request={
             "application/json": {
                 "type": "object",
