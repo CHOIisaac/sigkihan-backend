@@ -507,38 +507,34 @@ class RefrigeratorStatisticsView(APIView):
 
     def get(self, request, refrigerator_id):
         """
-        특정 냉장고에서 소비 및 폐기 통계를 반환
+        특정 냉장고에서 소비 및 폐기된 항목 반환
         """
-        # 냉장고 존재 여부 확인
+        # 냉장고 확인
         refrigerator = get_object_or_404(Refrigerator, id=refrigerator_id)
 
-        # 현재 사용자가 접근 권한이 있는 냉장고인지 확인
+        # 사용자가 냉장고 접근 권한 확인
         if not refrigerator.access_list.filter(user=request.user).exists():
             return Response({"error": "You do not have access to this refrigerator."}, status=403)
 
-        # 행동별 통계 계산 (냉장고 전체)
-        stats = FoodHistory.objects.filter(
-            fridge_food__refrigerator=refrigerator
-        ).values('action').annotate(
-            total_quantity=Sum('quantity')
-        )
+        # 소비 및 폐기된 식품 조회
+        consumed_foods = FoodHistory.objects.filter(
+            fridge_food__refrigerator=refrigerator,
+            action='consumed'
+        ).values('food_name').annotate(total_quantity=Sum('quantity'))
 
-        # 데이터 구조화
+        discarded_foods = FoodHistory.objects.filter(
+            fridge_food__refrigerator=refrigerator,
+            action='discarded'
+        ).values('food_name').annotate(total_quantity=Sum('quantity'))
+
+        # 결과 데이터 구조화
         data = {
             "refrigerator": {
                 "id": refrigerator.id,
                 "name": refrigerator.name,
             },
-            "statistics": {
-                "consumed": 0,
-                "discarded": 0,
-            }
+            "consumed_items": list(consumed_foods),  # 소비된 항목 리스트
+            "discarded_items": list(discarded_foods)  # 폐기된 항목 리스트
         }
-
-        for stat in stats:
-            action = stat['action']
-            total_quantity = stat['total_quantity']
-            if action in data['statistics']:
-                data['statistics'][action] = total_quantity
 
         return Response(data, status=200)

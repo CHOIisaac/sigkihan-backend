@@ -109,7 +109,7 @@ class UserDetailAPIView(APIView):
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @extend_schema(
-        summary="사용자 삭제",
+        summary="사용자 탈퇴",
         description="특정 사용자를 완전히 삭제합니다. 사용자 ID를 경로 매개변수로 전달해야 합니다.",
         tags=["Users"],
         responses={
