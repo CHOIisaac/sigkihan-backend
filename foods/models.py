@@ -54,6 +54,11 @@ class FoodHistory(models.Model):
         ('discarded', 'Discarded'),  # 폐기했어요
     ]
 
+    refrigerator = models.ForeignKey(
+        'refriges.Refrigerator', on_delete=models.CASCADE,
+        related_name='food_histories', verbose_name='냉장고', null=True,  # 기존 데이터에서 NULL 허용
+        blank=True # 폼에서 비워
+    )
     fridge_food = models.ForeignKey(
         FridgeFood, on_delete=models.SET_NULL, null=True,
         blank=True, related_name='food_histories', verbose_name='냉장고 식품 ID'

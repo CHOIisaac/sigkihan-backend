@@ -51,7 +51,7 @@ INSTALLED_APPS = [
     'django_celery_beat',
     'django_celery_results',
     'notifications.apps.NotificationsConfig',
-    'channels',
+    # 'channels',
 ]
 
 
@@ -87,7 +87,7 @@ SPECTACULAR_SETTINGS = {
             {'name': 'Memos', 'description': 'RefrigeratorMemos management'},
             {'name': 'Members', 'description': 'Members-related operations'},
             {'name': 'Foods', 'description': 'Food-related operations'},
-            {'name': 'Food Statistics', 'description': 'FoodsStatistics-related operations'},
+            {'name': 'Food Statistics', 'description': 'FoodStatistics-related operations'},
             {'name': 'Notifications', 'description': 'Notification-related operations'},
             {'name': 'Openai', 'description': 'ChatGPT-related operations'},
             {'name': 'Auth', 'description': 'Login-related operations'},

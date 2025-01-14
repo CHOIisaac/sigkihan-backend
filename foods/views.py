@@ -342,6 +342,15 @@ class FoodHistoryView(APIView):
             if fridge_food.quantity < quantity:
                 return Response({"error": "Not enough quantity to perform this action."}, status=400)
 
+            FoodHistory.objects.create(
+                food_name=fridge_food.name or fridge_food.default_food,
+                user=request.user,
+                refrigerator=fridge_food.refrigerator,
+                fridge_food=fridge_food,
+                action=action,
+                quantity=quantity
+            )
+
             fridge_food.quantity -= quantity
 
             if fridge_food.quantity == 0:
@@ -349,52 +358,12 @@ class FoodHistoryView(APIView):
             else:
                 fridge_food.save()
 
-            FoodHistory.objects.create(
-                food_name=fridge_food.name or fridge_food.default_food,
-                user=request.user,
-                fridge_food=fridge_food,
-                action=action,
-                quantity=quantity
-            )
-
             return Response({
                 "message": f"{action.capitalize()} recorded successfully.",
                 "remaining_quantity": fridge_food.quantity
             }, status=201)
 
         return Response({"error": "Invalid action."}, status=400)
-
-    # @extend_schema(
-    #     summary="특정 음식에 대한 히스토리 조회",
-    #     description="냉장고의 특정 음식에 대한 소비 및 폐기 기록을 조회합니다.",
-    #     responses={
-    #         200: {
-    #             "description": "히스토리 조회 성공",
-    #             "content": {
-    #                 "application/json": {
-    #                     "example": [
-    #                         {"action": "consumed", "quantity": 2, "timestamp": "2024-12-11T08:00:00Z"},
-    #                         {"action": "discarded", "quantity": 1, "timestamp": "2024-12-12T09:00:00Z"}
-    #                     ]
-    #                 }
-    #             }
-    #         },
-    #         404: {"description": "음식을 찾을 수 없습니다."}
-    #     },
-    # )
-    # def get(self, request, id, refrigerator_id):
-    #     fridge_food = get_object_or_404(FridgeFood, id=id, refrigerator_id=refrigerator_id)
-    #     print(fridge_food)
-    #     histories = fridge_food.food_histories.all()
-    #     data = [
-    #         {
-    #             "action": history.action,
-    #             "quantity": history.quantity,
-    #             "timestamp": history.timestamp,
-    #         }
-    #         for history in histories
-    #     ]
-    #     return Response(data, status=200)
 
 
 class FoodExpirationQueryView(APIView):
