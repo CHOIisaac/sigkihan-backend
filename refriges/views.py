@@ -370,6 +370,7 @@ class InvitationListView(APIView):
 
 
 class RemoveMemberView(APIView):
+    permission_classes = [IsAuthenticated]
     @extend_schema(
         summary="냉장고 멤버 추방",
         description="오너가 특정 멤버를 냉장고에서 추방합니다.",
@@ -402,6 +403,7 @@ class RemoveMemberView(APIView):
 
 
 class LeaveRefrigeratorView(APIView):
+    permission_classes = [IsAuthenticated]
     @extend_schema(
         summary="냉장고 나가기",
         description="멤버가 스스로 냉장고를 떠나는 API입니다.",

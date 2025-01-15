@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from django.db.models import Sum
+from django.db.models import Sum, Max
 from openai import OpenAI
 from decouple import config
 from django.http import Http404
@@ -474,11 +474,10 @@ class FoodExpirationQueryView(APIView):
 class RefrigeratorStatisticsView(APIView):
     permission_classes = [IsAuthenticated]
 
-
     @extend_schema(
         summary="냉장고 식품 소비 및 폐기 통계",
         description=(
-            "특정 냉장고에서 소비 및 폐기된 항목과 각각의 총 수량을 반환합니다. "
+            "특정 냉장고에서 소비 및 폐기된 항목과 각각의 총 수량 및 마지막 기록 시간을 반환합니다. "
             "냉장고에 접근 권한이 있어야 조회할 수 있습니다."
         ),
         tags=["Food Statistics"],
@@ -508,14 +507,16 @@ class RefrigeratorStatisticsView(APIView):
                             "id": 1,
                             "name": "우리집 냉장고"
                         },
-                        "consumed_items": [
-                            {"food_name": "사과", "total_quantity": 5},
-                            {"food_name": "바나나", "total_quantity": 2}
-                        ],
-                        "discarded_items": [
-                            {"food_name": "우유", "total_quantity": 1},
-                            {"food_name": "치즈", "total_quantity": 3}
-                        ]
+                        "statistics": {
+                            "consumed": [
+                                {"food_name": "사과", "total_quantity": 5, "last_updated": "2025-01-01T12:00:00Z"},
+                                {"food_name": "바나나", "total_quantity": 2, "last_updated": "2025-01-02T15:30:00Z"}
+                            ],
+                            "discarded": [
+                                {"food_name": "우유", "total_quantity": 1, "last_updated": "2025-01-03T10:00:00Z"},
+                                {"food_name": "치즈", "total_quantity": 3, "last_updated": "2025-01-04T09:20:00Z"}
+                            ]
+                        }
                     }
                 }
             ),
@@ -549,15 +550,23 @@ class RefrigeratorStatisticsView(APIView):
             return Response({"error": "You do not have access to this refrigerator."}, status=403)
 
         # 소비 및 폐기된 식품 조회
-        consumed_foods = FoodHistory.objects.filter(
-            fridge_food__refrigerator=refrigerator,
-            action='consumed'
-        ).values('food_name').annotate(total_quantity=Sum('quantity'))
+        consumed_foods = (
+            FoodHistory.objects.filter(refrigerator=refrigerator, action='consumed')
+            .values('food_name')
+            .annotate(
+                total_quantity=Sum('quantity'),
+                last_updated=Max('timestamp')
+            )
+        )
 
-        discarded_foods = FoodHistory.objects.filter(
-            fridge_food__refrigerator=refrigerator,
-            action='discarded'
-        ).values('food_name').annotate(total_quantity=Sum('quantity'))
+        discarded_foods = (
+            FoodHistory.objects.filter(refrigerator=refrigerator, action='discarded')
+            .values('food_name')
+            .annotate(
+                total_quantity=Sum('quantity'),
+                last_updated=Max('timestamp')
+            )
+        )
 
         # 결과 데이터 구조화
         data = {
@@ -565,8 +574,10 @@ class RefrigeratorStatisticsView(APIView):
                 "id": refrigerator.id,
                 "name": refrigerator.name,
             },
-            "consumed_items": list(consumed_foods),  # 소비된 항목 리스트
-            "discarded_items": list(discarded_foods)  # 폐기된 항목 리스트
+            "statistics": {
+                "consumed": list(consumed_foods),
+                "discarded": list(discarded_foods)
+            }
         }
 
         return Response(data, status=200)

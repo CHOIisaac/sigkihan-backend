@@ -8,7 +8,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('foods', '0003_fridgefood_storage_type'),
-        ('refriges', '0005_alter_refrigeratorinvitation_code'),
+        ('refriges', '0004_alter_refrigeratorinvitation_code'),
     ]
 
     operations = [
