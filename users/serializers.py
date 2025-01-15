@@ -14,7 +14,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ['name', 'image']
+        fields = ['id', 'name', 'image']
 
 
 class UserDetailSerializer(serializers.ModelSerializer):
@@ -22,7 +22,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ['name', 'email', 'image']
+        fields = ['id', 'name', 'email', 'image']
         # fields = ['id', 'name', 'email', 'password', 'kakao_id', 'image', 'is_social', 'is_active', 'is_staff', 'is_superuser', 'created_at', 'updated_at']
         # read_only_fields = ['is_social', 'created_at', 'updated_at']
 

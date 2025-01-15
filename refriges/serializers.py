@@ -24,8 +24,8 @@ class RefrigeratorMemberSerializer(serializers.ModelSerializer):
         owner = obj.access_list.filter(role='owner').first()
         return {
             'id': owner.user.id,
-            'email': owner.user.email,
-            'name': owner.user.name
+            'name': owner.user.name,
+            'profile_image': owner.user.image.image.url
         } if owner else None
 
     def get_member(self, obj) -> list[str]:
@@ -33,8 +33,8 @@ class RefrigeratorMemberSerializer(serializers.ModelSerializer):
         return [
             {
                 'id': member.user.id,
-                'email': member.user.email,
-                'name': member.user.name
+                'name': member.user.name,
+                'profile_image': member.user.image.image.url
             }
             for member in members
         ]
