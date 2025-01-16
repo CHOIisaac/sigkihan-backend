@@ -340,8 +340,12 @@ class InvitationStatusUpdateView(APIView):
                 refrigerator=invitation.refrigerator,
                 role='member'
             )
+            return Response({"message": "Invitation accepted."}, status=200)
 
-        return Response({"message": "Invitation accepted."}, status=200)
+        # 초대 거절 처리
+        invitation.status = 'declined'
+        invitation.save()
+        return Response({"message": "Invitation declined."}, status=200)
 
 
 class InvitationListView(APIView):
