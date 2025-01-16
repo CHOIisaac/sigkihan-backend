@@ -25,7 +25,8 @@ class RefrigeratorMemberSerializer(serializers.ModelSerializer):
         return {
             'id': owner.user.id,
             'name': owner.user.name,
-            'profile_image': owner.user.image.image.url
+            'profile_image': owner.user.image.image.url,
+            'profile_image_id': owner.user.image.id
         } if owner else None
 
     def get_member(self, obj) -> list[str]:
@@ -34,7 +35,8 @@ class RefrigeratorMemberSerializer(serializers.ModelSerializer):
             {
                 'id': member.user.id,
                 'name': member.user.name,
-                'profile_image': member.user.image.image.url
+                'profile_image': member.user.image.image.url,
+                'profile_image_id': member.user.image.id
             }
             for member in members
         ]
