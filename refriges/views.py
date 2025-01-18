@@ -6,9 +6,6 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from refriges.models import RefrigeratorAccess, Refrigerator, RefrigeratorInvitation, RefrigeratorMemo
 from refriges.serializers import RefrigeratorSerializer, RefrigeratorMemberSerializer, RefrigeratorMemoSerializer, RefrigeratorInvitationSerializer
-# from refriges.services import create_invitation
-from users.models import CustomUser
-
 
 class RefrigeratorViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
