@@ -270,6 +270,6 @@ CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers.DatabaseScheduler'
 CELERY_BEAT_SCHEDULE = {
     'send_notifications_daily': {
         'task': 'notifications.tasks.send_notifications',
-        'schedule': crontab(minute="*/1"),  # 매일 00:00에 실행
+        'schedule': crontab(minute="*/1"),
     },
 }

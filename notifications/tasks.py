@@ -45,8 +45,8 @@ def send_notifications():
     logger.info("Notifications have been created for D-3 and D-0 foods.")
 
 
-def start_scheduler():
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(send_notifications, 'interval', minutes=1, id="daily_notifications", replace_existing=True)
-    scheduler.start()
-    print("Scheduler started.")
+# def start_scheduler():
+#     scheduler = BackgroundScheduler()
+#     scheduler.add_job(send_notifications, 'interval', minutes=1, id="daily_notifications", replace_existing=True)
+#     scheduler.start()
+#     print("Scheduler started.")
