@@ -30,6 +30,7 @@ class NotificationListView(APIView):
         # 특정 냉장고와 연결된 모든 사용자들의 알림 조회
         notifications = Notification.objects.filter(
             refrigerator_id=refrigerator_id,
+            user=request.user,
             created_at__gte=one_week_ago,
             d_day='D-3'
             # is_read=False
@@ -55,6 +56,7 @@ class PopupNotificationListView(APIView):
         # 특정 냉장고와 연결된 모든 사용자들의 알림 조회
         notifications = Notification.objects.filter(
             refrigerator_id=refrigerator_id,
+            user=request.user,
             d_day='D-0',
             is_read=False
         )
@@ -78,7 +80,12 @@ class NotificationMarkAsReadView(APIView):
         },
     )
     def post(self, request, refrigerator_id):
-        notifications = Notification.objects.filter(refrigerator_id=refrigerator_id, is_read=False, d_day='D-3')
+        notifications = Notification.objects.filter(
+            refrigerator_id=refrigerator_id,
+            user=request.user,  # 현재 사용자와 관련된 알림만 필터링
+            is_read=False,
+            d_day='D-3'
+        )
 
         if not notifications.exists():
             return Response({"error": "No unread notifications found for this refrigerator."}, status=404)
@@ -103,7 +110,12 @@ class PopupNotificationMarkAsReadView(APIView):
         },
     )
     def post(self, request, refrigerator_id):
-        notifications = Notification.objects.filter(refrigerator_id=refrigerator_id, is_read=False, d_day='D-0')
+        notifications = Notification.objects.filter(
+            refrigerator_id=refrigerator_id,
+            user=request.user,  # 현재 사용자와 관련된 알림만 필터링
+            is_read=False,
+            d_day='D-0'
+        )
 
         if not notifications.exists():
             return Response({"error": "No unread notifications found for this refrigerator."}, status=404)
