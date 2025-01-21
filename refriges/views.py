@@ -1,3 +1,6 @@
+import logging
+import os
+
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample, OpenApiResponse
 from rest_framework import status, viewsets
@@ -6,6 +9,27 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from refriges.models import RefrigeratorAccess, Refrigerator, RefrigeratorInvitation, RefrigeratorMemo
 from refriges.serializers import RefrigeratorSerializer, RefrigeratorMemberSerializer, RefrigeratorMemoSerializer, RefrigeratorInvitationSerializer
+
+logger = logging.getLogger(__name__)
+
+# 로그 디렉토리 설정
+LOG_DIR = "logs"
+LOG_FILE = os.path.join(LOG_DIR, "invitation.log")
+
+# 디렉토리가 없으면 생성
+if not os.path.exists(LOG_DIR):
+    os.makedirs(LOG_DIR)
+
+# 로거 설정
+logger = logging.getLogger("invitation")
+logger.setLevel(logging.DEBUG)
+
+# FileHandler 추가
+file_handler = logging.FileHandler(LOG_FILE)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
+
 
 class RefrigeratorViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
@@ -315,14 +339,27 @@ class InvitationStatusUpdateView(APIView):
         },
     )
     def post(self, request, invitation_code):
+        # 로그: 요청 시작
+        logger.info("InvitationStatusUpdateView POST request started")
+        logger.debug(f"Request data: {request.data}")
+
         invitation_status = request.data.get('status')
         if not invitation_code:
+            logger.warning("Invitation code is missing in the request")
             return Response({"error": "Invitation code is required."}, status=400)
 
         # 초대 확인
-        invitation = get_object_or_404(RefrigeratorInvitation, code=invitation_code)
+        try:
+            invitation = RefrigeratorInvitation.objects.get(code=invitation_code)
+        except RefrigeratorInvitation.DoesNotExist:
+            logger.error(f"Invitation not found for code: {invitation_code}")
+            return Response({"error": "Invitation not found."}, status=404)
+
+        logger.info(f"Invitation retrieved: {invitation}")
+        logger.debug(f"Invitation status: {invitation.status}")
 
         if invitation.status != 'pending':
+            logger.warning(f"Invitation is no longer valid. Current status: {invitation.status}")
             return Response({"error": "This invitation is no longer valid."}, status=400)
 
         # 초대 수락 처리
@@ -330,6 +367,7 @@ class InvitationStatusUpdateView(APIView):
             invitation.status = invitation_status
             invitation.invitee_email = request.user.email
             invitation.save()
+            logger.info(f"Invitation accepted by user: {request.user.email}")
 
             # 냉장고 멤버로 추가
             RefrigeratorAccess.objects.create(
@@ -337,11 +375,13 @@ class InvitationStatusUpdateView(APIView):
                 refrigerator=invitation.refrigerator,
                 role='member'
             )
+            logger.info(f"User {request.user.email} added to refrigerator {invitation.refrigerator.name} as member.")
             return Response({"message": "Invitation accepted."}, status=200)
 
         # 초대 거절 처리
         invitation.status = 'declined'
         invitation.save()
+        logger.info(f"Invitation declined by user: {request.user.email}")
         return Response({"message": "Invitation declined."}, status=200)
 
 
