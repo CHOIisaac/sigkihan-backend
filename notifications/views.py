@@ -26,7 +26,6 @@ class NotificationListView(APIView):
     )
     def get(self, request, refrigerator_id):
         one_week_ago = now() - timedelta(days=7)
-
         # 특정 냉장고와 연결된 모든 사용자들의 알림 조회
         notifications = Notification.objects.filter(
             refrigerator_id=refrigerator_id,
@@ -52,13 +51,14 @@ class PopupNotificationListView(APIView):
         responses={200: NotificationSerializer(many=True)}
     )
     def get(self, request, refrigerator_id):
-
+        today = now().date()
         # 특정 냉장고와 연결된 모든 사용자들의 알림 조회
         notifications = Notification.objects.filter(
             refrigerator_id=refrigerator_id,
             user=request.user,
             d_day='D-0',
-            is_read=False
+            is_read=False,
+            created_at__date=today
         )
 
         serializer = NotificationSerializer(notifications, many=True)
