@@ -1,6 +1,6 @@
 from django.http import Http404
 from rest_framework.generics import GenericAPIView, get_object_or_404
-from rest_framework.mixins import ListModelMixin
+from rest_framework.mixins import ListModelMixin, RetrieveModelMixin, UpdateModelMixin, DestroyModelMixin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema
@@ -23,114 +23,48 @@ class TestAPIView(GenericAPIView):
         return Response({"message": "API is working"})
 
 
-class UserDetailAPIView(APIView):
+class UserViewSet(RetrieveModelMixin, UpdateModelMixin, DestroyModelMixin, GenericViewSet):
     """
-    GET: 특정 사용자 조회
-    PUT: 사용자 정보 수정
+    사용자 조회, 수정, 삭제를 처리하는 Generic ViewSet
     """
+    queryset = CustomUser.objects.all()
+    serializer_class = UserDetailSerializer
     permission_classes = [IsAuthenticated]
-    serializer_class = UserSerializer
+    http_method_names = ['get', 'patch', 'delete']
+
+    def get_serializer_class(self):
+        """
+        요청 작업(action)에 따라 적절한 Serializer를 반환
+        """
+        if self.action == 'retrieve':
+            return UserDetailSerializer
+        elif self.action == 'partial_update':
+            return UserUpdateSerializer
+        return super().get_serializer_class()
 
     @extend_schema(
         summary="사용자 정보 조회",
         description="특정 사용자의 ID를 기반으로 상세 정보를 조회합니다.",
         tags=["Users"],
-        parameters=[
-            {
-                "name": "id",
-                "in": "path",
-                "required": True,
-                "description": "조회할 사용자의 ID",
-                "schema": {"type": "integer"}
-            }
-        ],
-        responses={
-            200: UserDetailSerializer,
-            404: {"description": "사용자를 찾을 수 없음"},
-            500: {"description": "예상치 못한 오류 발생"}
-        },
     )
-    def get(self, request, id):
-        try:
-            user = get_object_or_404(CustomUser, pk=id)  # 객체를 조회
-            serializer = UserDetailSerializer(user)
-            return Response(serializer.data)
-        except Http404:
-            # 객체가 존재하지 않을 경우 처리
-            return Response({"error": f"User with ID {id} not found."}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            # 그 외 예외 처리
-            return Response({"error": f"An unexpected error occurred: {str(e)}"},
-                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    def retrieve(self, request, *args, **kwargs):
+        return super().retrieve(request, *args, **kwargs)
 
     @extend_schema(
         summary="사용자 정보 수정",
         description="사용자의 이름과 프로필 이미지를 수정합니다.",
         tags=["Users"],
-        request={
-            "application/json": {
-                "type": "object",
-                "properties": {
-                    "name": {"type": "string", "example": "새로운 이름", "description": "사용자 이름"},
-                    "image_id": {"type": "integer", "example": 3, "description": "ProfileImage ID"}
-                },
-                "required": ["name", "image_id"]
-            }
-        },
-        responses={
-            200: {
-                "type": "object",
-                "properties": {
-                    "name": {"type": "string", "example": "새로운 이름"},
-                    "profile_image": {
-                        "type": "object",
-                        "properties": {
-                            "id": {"type": "integer", "example": 3},
-                            "name": {"type": "string", "example": "프로필 이미지 이름"},
-                            "image_url": {"type": "string", "example": "/media/profile_images/image.png"}
-                        }
-                    }
-                }
-            }
-        }
     )
-    def patch(self, request, id):
-        try:
-            print("Request data:", request.data)  # 디버깅용
-            user = get_object_or_404(CustomUser, pk=id)
-            serializer = UserUpdateSerializer(user, data=request.data, partial=True)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_200_OK)  # 성공 응답
-            print("Serializer errors:", serializer.errors)  # 디버깅용
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)  # 유효하지 않은 데이터 응답
-        except Exception as e:
-            return Response({"error": f"An unexpected error occurred: {str(e)}"},
-                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    def partial_update(self, request, *args, **kwargs):
+        return super().partial_update(request, *args, **kwargs)
 
     @extend_schema(
-        summary="사용자 탈퇴",
-        description="특정 사용자를 완전히 삭제합니다. 사용자 ID를 경로 매개변수로 전달해야 합니다.",
+        summary="사용자 삭제",
+        description="특정 사용자를 삭제합니다.",
         tags=["Users"],
-        responses={
-            204: {"description": "사용자 삭제 성공"},
-            404: {"description": "사용자를 찾을 수 없음"},
-            500: {"description": "예상치 못한 오류 발생"}
-        },
     )
-    def delete(self, request, id):
-        """
-        DELETE 요청으로 사용자 완전 삭제
-        """
-        try:
-            user = get_object_or_404(CustomUser, pk=id)
-            user.delete()
-            return Response({"message": f"User with ID {id} has been deleted."}, status=status.HTTP_204_NO_CONTENT)
-        except Http404:
-            return Response({"error": f"User with ID {id} not found."}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            return Response({"error": f"An unexpected error occurred: {str(e)}"},
-                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    def destroy(self, request, *args, **kwargs):
+        return super().destroy(request, *args, **kwargs)
 
 
 class ProfileImageViewSet(ListModelMixin, GenericViewSet):

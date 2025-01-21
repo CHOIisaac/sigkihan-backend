@@ -1,7 +1,7 @@
 from rest_framework.routers import DefaultRouter
 from django.urls import path
 
-from users.views import TestAPIView, UserDetailAPIView, ProfileImageViewSet
+from users.views import TestAPIView, ProfileImageViewSet, UserViewSet
 
 
 class NoSlashRouter(DefaultRouter):
@@ -14,11 +14,11 @@ class NoSlashRouter(DefaultRouter):
 
 
 router = NoSlashRouter()
+router.register(r'users', UserViewSet, basename='user')
 
 # router.register(r'users/profile-images', ProfileImageViewSet, basename='profile-image')
 
-
 urlpatterns = [
     path('test/', TestAPIView.as_view(), name='test-api'),
-    path('users/<int:id>', UserDetailAPIView.as_view(), name='user-detail'),
+    # path('users/<int:id>', UserDetailAPIView.as_view(), name='user-detail'),
 ] + router.urls

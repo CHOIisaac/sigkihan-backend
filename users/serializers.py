@@ -35,7 +35,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         model = CustomUser
         fields = ['name', 'image_id', 'profile_image']
 
-    def get_profile_image(self, obj):
+    def get_profile_image(self, obj) -> str:
         """
         프로필 이미지 정보를 반환
         """
