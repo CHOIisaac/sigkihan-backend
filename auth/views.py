@@ -147,30 +147,6 @@ class KakaoLoginView(APIView):
             else:
                 logger.info(f"Existing user retrieved: {user.name}")
 
-
-            # # 초대 코드가 있는 경우 처리
-            # if invitation_code:
-            #     from .models import RefrigeratorInvitation  # 필요한 모델 import
-            #
-            #     try:
-            #         logger.info("Processing invitation with invitation code")
-            #         invitation = RefrigeratorInvitation.objects.get(code=invitation_code, status='pending')
-            #         invitation.status = 'accepted'
-            #         invitation.invitee_email = request.user.email
-            #         invitation.save()
-            #
-            #         # 초대를 수락한 사용자를 냉장고 멤버로 추가
-            #         RefrigeratorAccess.objects.create(
-            #             user=user,
-            #             refrigerator=invitation.refrigerator,
-            #             role='member'
-            #         )
-            #         logger.info(f"User {user.name} added to refrigerator {invitation.refrigerator.name} as member")
-            #     except RefrigeratorInvitation.DoesNotExist:
-            #         logger.error(f"Invalid or expired invitation code: {invitation_code}")
-            #         return Response({"error": "Invalid or expired invitation code"}, status=status.HTTP_400_BAD_REQUEST)
-
-
             user_refrigerator = RefrigeratorAccess.objects.filter(user=user, role='owner').first()
             refrigerator_id = user_refrigerator.refrigerator.id if user_refrigerator else None
 
