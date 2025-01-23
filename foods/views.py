@@ -1,12 +1,14 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
-from django.db.models import Sum, Max
+from dateutil.relativedelta import relativedelta
+from django.db.models import Sum
+from django.utils.timezone import make_aware, now
 from openai import OpenAI
 from decouple import config
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiParameter, OpenApiResponse
-from rest_framework.generics import ListAPIView, UpdateAPIView
+from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -471,14 +473,74 @@ class FoodExpirationQueryView(APIView):
             return Response({"error": f"Failed to fetch expiration info: {str(e)}"}, status=500)
 
 
-class RefrigeratorStatisticsView(APIView):
+class MonthlyTopConsumedFoodsView(APIView):
+    """
+    월간 소비 식품 Top5
+    """
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        summary="냉장고 식품 소비 및 폐기 통계",
+        summary="월간 소비 식품 Top 5",
+        description="특정 냉장고에서 월간 소비량이 가장 많은 상위 5개 식품을 반환합니다.",
+        tags=["Food Statistics"],
+        responses={
+            200: {
+                "application/json": {
+                    "monthly_top_consumed_foods": [
+                        {"food_name": "사과", "total_quantity": 10},
+                        {"food_name": "바나나", "total_quantity": 8},
+                    ]
+                }
+            },
+            404: {"description": "냉장고를 찾을 수 없음"},
+        },
+    )
+    def get(self, request, refrigerator_id):
+        # 냉장고 확인
+        refrigerator = get_object_or_404(Refrigerator, id=refrigerator_id)
+
+        # 사용자가 냉장고 접근 권한 확인
+        if not refrigerator.access_list.filter(user=request.user).exists():
+            return Response({"error": "You do not have access to this refrigerator."}, status=403)
+
+        # 이번 달의 시작과 끝 날짜를 timezone-aware로 생성
+        now = datetime.now()
+        start_of_month = make_aware(datetime(now.year, now.month, 1))
+        end_of_month = make_aware(datetime(now.year, now.month + 1, 1)) - timedelta(days=1)  # 다음 달 1일 - 1일
+
+        # 월간 소비된 식품 조회
+        consumed_foods = (
+            FoodHistory.objects.filter(
+                refrigerator=refrigerator,
+                action="consumed",
+                timestamp__range=(start_of_month, end_of_month),
+            )
+            .values("food_name")
+            .annotate(total_quantity=Sum("quantity"))
+            .order_by("-total_quantity")[:5]
+        )
+
+        # 결과 데이터 구조화
+        data = {
+            "refrigerator": {"id": refrigerator.id, "name": refrigerator.name},
+            "monthly_top_consumed_foods": list(consumed_foods),  # 소비된 항목 리스트
+        }
+
+        return Response(data, status=200)
+
+
+
+class MonthlyConsumptionRankingView(APIView):
+    """
+    월간 소비 랭킹
+    """
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="월간 소비 랭킹",
         description=(
-            "특정 냉장고에서 소비 및 폐기된 항목과 각각의 총 수량 및 마지막 기록 시간을 반환합니다. "
-            "냉장고에 접근 권한이 있어야 조회할 수 있습니다."
+            "특정 냉장고에서 구성원의 월간 소비량을 랭킹 순으로 반환합니다. "
+            "구성원이 2명 이상인 경우에만 랭킹이 표시됩니다."
         ),
         tags=["Food Statistics"],
         parameters=[
@@ -491,40 +553,72 @@ class RefrigeratorStatisticsView(APIView):
                 examples=[
                     OpenApiExample(
                         name="냉장고 예시 ID",
-                        value=1,
-                        summary="냉장고 ID 예시",
-                        description="통계를 조회할 냉장고의 ID"
+                        value=3,
+                        description="소비 랭킹을 조회할 냉장고의 ID입니다."
                     )
                 ]
-            )
+            ),
+            OpenApiParameter(
+                name="month",
+                location=OpenApiParameter.QUERY,
+                description="조회할 달 (기본값: 현재 달)",
+                required=False,
+                type=int,
+                examples=[
+                    OpenApiExample(
+                        name="예시: 1월",
+                        value=1,
+                        description="1월 데이터를 조회할 경우"
+                    )
+                ]
+            ),
+            OpenApiParameter(
+                name="year",
+                location=OpenApiParameter.QUERY,
+                description="조회할 연도 (기본값: 현재 연도)",
+                required=False,
+                type=int,
+                examples=[
+                    OpenApiExample(
+                        name="예시: 2025년",
+                        value=2025,
+                        description="2025년 데이터를 조회할 경우"
+                    )
+                ]
+            ),
         ],
         responses={
             200: OpenApiResponse(
-                description="소비 및 폐기된 항목과 수량 반환 성공",
+                description="소비 랭킹 반환 성공",
                 examples={
                     "application/json": {
-                        "refrigerator": {
-                            "id": 1,
-                            "name": "우리집 냉장고"
-                        },
-                        "statistics": {
-                            "consumed": [
-                                {"food_name": "사과", "total_quantity": 5, "last_updated": "2025-01-01T12:00:00Z"},
-                                {"food_name": "바나나", "total_quantity": 2, "last_updated": "2025-01-02T15:30:00Z"}
-                            ],
-                            "discarded": [
-                                {"food_name": "우유", "total_quantity": 1, "last_updated": "2025-01-03T10:00:00Z"},
-                                {"food_name": "치즈", "total_quantity": 3, "last_updated": "2025-01-04T09:20:00Z"}
-                            ]
-                        }
+                        "refrigerator": {"id": 3, "name": "우리집 냉장고"},
+                        "consumption_ranking": [
+                            {
+                                "user": {
+                                    "id": 1,
+                                    "name": "홍길동",
+                                    "profile_image": "https://example.com/profile_image_1.jpg"
+                                },
+                                "total_quantity": 35
+                            },
+                            {
+                                "user": {
+                                    "id": 2,
+                                    "name": "김철수",
+                                    "profile_image": "https://example.com/profile_image_2.jpg"
+                                },
+                                "total_quantity": 20
+                            }
+                        ]
                     }
                 }
             ),
             403: OpenApiResponse(
-                description="접근 권한이 없는 냉장고",
+                description="구성원이 2명 미만인 경우",
                 examples={
                     "application/json": {
-                        "error": "You do not have access to this refrigerator."
+                        "error": "구성원이 2명 이상인 경우에만 랭킹이 표시됩니다."
                     }
                 }
             ),
@@ -539,45 +633,52 @@ class RefrigeratorStatisticsView(APIView):
         }
     )
     def get(self, request, refrigerator_id):
-        """
-        특정 냉장고에서 소비 및 폐기된 항목 반환
-        """
         # 냉장고 확인
         refrigerator = get_object_or_404(Refrigerator, id=refrigerator_id)
 
-        # 사용자가 냉장고 접근 권한 확인
+        # 냉장고 접근 권한 확인
         if not refrigerator.access_list.filter(user=request.user).exists():
             return Response({"error": "You do not have access to this refrigerator."}, status=403)
 
-        # 소비 및 폐기된 식품 조회
-        consumed_foods = (
-            FoodHistory.objects.filter(refrigerator=refrigerator, action='consumed')
-            .values('food_name')
-            .annotate(
-                total_quantity=Sum('quantity'),
-                last_updated=Max('timestamp')
-            )
-        )
+        # 구성원이 2명 이상인지 확인
+        members = refrigerator.access_list.filter(role__in=["owner", "member"])
+        if members.count() < 2:
+            return Response({"error": "구성원이 2명 이상인 경우에만 랭킹이 표시됩니다."}, status=403)
 
-        discarded_foods = (
-            FoodHistory.objects.filter(refrigerator=refrigerator, action='discarded')
-            .values('food_name')
-            .annotate(
-                total_quantity=Sum('quantity'),
-                last_updated=Max('timestamp')
+        # 현재 달 또는 요청된 달 계산 (timezone-aware)
+        current_time = now()
+        month = int(request.query_params.get("month", current_time.month))
+        year = int(request.query_params.get("year", current_time.year))
+
+        start_date = make_aware(datetime(year=year, month=month, day=1))
+        end_date = make_aware((start_date + relativedelta(months=1)))
+
+        # 월간 소비 데이터
+        consumption_data = (
+            FoodHistory.objects.filter(
+                refrigerator=refrigerator,
+                action="consumed",
+                timestamp__range=(start_date, end_date),
             )
+            .values("user__id", "user__name", "user__profile_image")
+            .annotate(total_quantity=Sum("quantity"))
+            .order_by("-total_quantity")
         )
 
         # 결과 데이터 구조화
         data = {
-            "refrigerator": {
-                "id": refrigerator.id,
-                "name": refrigerator.name,
-            },
-            "statistics": {
-                "consumed": list(consumed_foods),
-                "discarded": list(discarded_foods)
-            }
+            "refrigerator": {"id": refrigerator.id, "name": refrigerator.name},
+            "consumption_ranking": [
+                {
+                    "user": {
+                        "id": entry["user__id"],
+                        "name": entry["user__name"],
+                        "profile_image": entry["user__profile_image"],
+                    },
+                    "total_quantity": entry["total_quantity"],
+                }
+                for entry in consumption_data
+            ],
         }
 
         return Response(data, status=200)
