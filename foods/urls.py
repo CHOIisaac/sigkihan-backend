@@ -2,7 +2,7 @@ from rest_framework.routers import DefaultRouter
 from django.urls import path
 
 from foods.views import DefaultFoodListView, FridgeFoodViewSet, FoodHistoryView, FoodExpirationQueryView, \
-    MonthlyTopConsumedFoodsView, MonthlyConsumptionRankingView
+    MonthlyTopConsumedFoodView, MonthlyConsumptionRankingView
 
 
 class NoSlashRouter(DefaultRouter):
@@ -25,7 +25,7 @@ urlpatterns = [
     path('refrigerators/<int:refrigerator_id>/foods/<int:id>/history', FoodHistoryView.as_view(), name='food-history'),
     path('food/expiration-query/', FoodExpirationQueryView.as_view(), name='food-expiration-query'),
     path('refrigerators/<int:refrigerator_id>/monthly-top-consumed-foods',
-        MonthlyTopConsumedFoodsView.as_view(),
+        MonthlyTopConsumedFoodView.as_view(),
         name='monthly-top-consumed-foods'
     ),
     path(

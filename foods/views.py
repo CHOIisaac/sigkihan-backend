@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 from dateutil.relativedelta import relativedelta
 from django.db.models import Sum
-from django.utils.timezone import make_aware, now
+from django.utils.timezone import make_aware, now, is_naive
 from openai import OpenAI
 from decouple import config
 from django.http import Http404
@@ -369,6 +369,8 @@ class FoodHistoryView(APIView):
 
 
 class FoodExpirationQueryView(APIView):
+    client = OpenAI(api_key=config("OPENAI_API_KEY"))  # 클라이언트 생성
+
     @extend_schema(
         summary="식품 유통기한 조회",
         description="ChatGPT를 사용하여 특정 식품의 평균 유통기한 정보를 반환합니다.",
@@ -434,8 +436,7 @@ class FoodExpirationQueryView(APIView):
 
         # ChatGPT API 호출
         try:
-            client = OpenAI(api_key=config("OPENAI_API_KEY"))  # 클라이언트 생성
-            completion = client.chat.completions.create(
+            completion = self.client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
                     {
@@ -473,7 +474,7 @@ class FoodExpirationQueryView(APIView):
             return Response({"error": f"Failed to fetch expiration info: {str(e)}"}, status=500)
 
 
-class MonthlyTopConsumedFoodsView(APIView):
+class MonthlyTopConsumedFoodView(APIView):
     """
     월간 소비 식품 Top5
     """
@@ -645,13 +646,19 @@ class MonthlyConsumptionRankingView(APIView):
         if members.count() < 2:
             return Response({"error": "구성원이 2명 이상인 경우에만 랭킹이 표시됩니다."}, status=403)
 
-        # 현재 달 또는 요청된 달 계산 (timezone-aware)
+        # 현재 달 또는 요청된 달 계산
         current_time = now()
         month = int(request.query_params.get("month", current_time.month))
         year = int(request.query_params.get("year", current_time.year))
 
-        start_date = make_aware(datetime(year=year, month=month, day=1))
-        end_date = make_aware((start_date + relativedelta(months=1)))
+        start_date = datetime(year=year, month=month, day=1)
+        end_date = (start_date + relativedelta(months=1))
+
+        # 타임존 어웨어 처리
+        if is_naive(start_date):
+            start_date = make_aware(start_date)
+        if is_naive(end_date):
+            end_date = make_aware(end_date)
 
         # 월간 소비 데이터
         consumption_data = (
@@ -660,7 +667,7 @@ class MonthlyConsumptionRankingView(APIView):
                 action="consumed",
                 timestamp__range=(start_date, end_date),
             )
-            .values("user__id", "user__name", "user__profile_image")
+            .values("user__id", "user__name")
             .annotate(total_quantity=Sum("quantity"))
             .order_by("-total_quantity")
         )
@@ -673,7 +680,6 @@ class MonthlyConsumptionRankingView(APIView):
                     "user": {
                         "id": entry["user__id"],
                         "name": entry["user__name"],
-                        "profile_image": entry["user__profile_image"],
                     },
                     "total_quantity": entry["total_quantity"],
                 }
