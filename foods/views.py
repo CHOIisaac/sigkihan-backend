@@ -541,7 +541,6 @@ class MonthlyConsumptionRankingView(APIView):
         summary="월간 소비 랭킹",
         description=(
             "특정 냉장고에서 구성원의 월간 소비량을 랭킹 순으로 반환합니다. "
-            "구성원이 2명 이상인 경우에만 랭킹이 표시됩니다."
         ),
         tags=["Food Statistics"],
         parameters=[
@@ -641,10 +640,10 @@ class MonthlyConsumptionRankingView(APIView):
         if not refrigerator.access_list.filter(user=request.user).exists():
             return Response({"error": "You do not have access to this refrigerator."}, status=403)
 
-        # 구성원이 2명 이상인지 확인
-        members = refrigerator.access_list.filter(role__in=["owner", "member"])
-        if members.count() < 2:
-            return Response({"error": "구성원이 2명 이상인 경우에만 랭킹이 표시됩니다."}, status=403)
+        # # 구성원이 2명 이상인지 확인
+        # members = refrigerator.access_list.filter(role__in=["owner", "member"])
+        # if members.count() < 2:
+        #     return Response({"error": "구성원이 2명 이상인 경우에만 랭킹이 표시됩니다."}, status=403)
 
         # 현재 달 또는 요청된 달 계산
         current_time = now()
