@@ -24,12 +24,12 @@ urlpatterns = [
     path('refrigerators/<int:refrigerator_id>/foods/<int:id>', FridgeFoodViewSet.as_view({'patch': 'partial_update', 'delete': 'destroy'}), name='fridge-food-detail'),
     path('refrigerators/<int:refrigerator_id>/foods/<int:id>/history', FoodHistoryView.as_view(), name='food-history'),
     path('food/expiration-query/', FoodExpirationQueryView.as_view(), name='food-expiration-query'),
-    path('refrigerators/<int:refrigerator_id>/monthly-top-consumed-foods',
+    path('refrigerators/<int:refrigerator_id>/statistics/monthly-top-consumed-foods',
         MonthlyTopConsumedFoodView.as_view(),
         name='monthly-top-consumed-foods'
     ),
     path(
-        'refrigerators/<int:refrigerator_id>/monthly-consumption-ranking',
+        'refrigerators/<int:refrigerator_id>/statistics/monthly-consumption-ranking',
         MonthlyConsumptionRankingView.as_view(),
         name='monthly-consumption-ranking'
     ),
