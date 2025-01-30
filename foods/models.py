@@ -79,6 +79,18 @@ class FoodHistory(models.Model):
         verbose_name = '식품 기록'
         verbose_name_plural = '식품 기록'
 
+        indexes = [
+            # 단일 필드 인덱스
+            models.Index(fields=['refrigerator'], name='idx_refrigerator'),
+            models.Index(fields=['user'], name='idx_user'),
+            models.Index(fields=['action'], name='idx_action'),
+            models.Index(fields=['timestamp'], name='idx_timestamp'),
+
+            # 복합 인덱스
+            models.Index(fields=['refrigerator', 'action', 'timestamp'], name='idx_refrige_action_timestamp'),
+            models.Index(fields=['user', 'action', 'timestamp'], name='idx_user_action_timestamp'),
+        ]
+        # 단일 및 복합 인덱스 추가
 
 # class CustomFood(models.Model):
 #     name = models.CharField(max_length=100, unique=True, verbose_name='사용자 정의 식품 이름')
