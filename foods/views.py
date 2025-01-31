@@ -667,7 +667,7 @@ class MonthlyConsumptionRankingView(APIView):
                 action="consumed",
                 timestamp__range=(start_date, end_date),
             )
-            .values("user__id", "user__name", "user__image__image")
+            .values("user__id", "user__name", "user__image")
             .annotate(total_quantity=Sum("quantity"))
             .order_by("-total_quantity")
         )
@@ -680,7 +680,7 @@ class MonthlyConsumptionRankingView(APIView):
                     "user": {
                         "id": entry["user__id"],
                         "name": entry["user__name"],
-                        "image": request.build_absolute_uri(settings.MEDIA_URL.rstrip('/') + entry["user__image__image"]) if entry["user__image__image"] else None
+                        "image": entry["user__image"] if entry["user__image"] else None
                     },
                     "total_quantity": entry["total_quantity"],
                 }
