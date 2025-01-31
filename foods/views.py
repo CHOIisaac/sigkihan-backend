@@ -508,7 +508,7 @@ class MonthlyTopConsumedFoodView(APIView):
         # 이번 달의 시작과 끝 날짜를 timezone-aware로 생성
         now = datetime.now()
         start_of_month = make_aware(datetime(now.year, now.month, 1))
-        end_of_month = make_aware(datetime(now.year, now.month + 1, 1)) - timedelta(days=1)  # 다음 달 1일 - 1일
+        end_of_month = make_aware(datetime(now.year, now.month + 1, 1))
 
         # 월간 소비된 식품 조회
         consumed_foods = (
