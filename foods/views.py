@@ -373,8 +373,8 @@ class FoodExpirationQueryView(APIView):
     client = OpenAI(api_key=config("OPENAI_API_KEY"))  # 클라이언트 생성
 
     @extend_schema(
-        summary="식품 유통기한 조회",
-        description="ChatGPT를 사용하여 특정 식품의 평균 유통기한 정보를 반환합니다.",
+        summary="식품 소비기한 조회",
+        description="ChatGPT를 사용하여 특정 식품의 소비기한 정보를 YYYY-MM-DD 형식으로 반환합니다.",
         tags=["Openai"],
         request={
             "application/json": {
@@ -384,9 +384,15 @@ class FoodExpirationQueryView(APIView):
                         "type": "string",
                         "description": "조회할 식품의 이름",
                         "example": "Milk"
+                    },
+                    "purchase_date": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "제조일자 (YYYY-MM-DD 형식)",
+                        "example": "2025-02-02"
                     }
                 },
-                "required": ["name"],
+                "required": ["name", "purchase_date"],
             }
         },
         responses={
@@ -396,19 +402,18 @@ class FoodExpirationQueryView(APIView):
                     "food_name": {
                         "type": "string",
                         "description": "조회된 식품 이름",
+                        "example": "Milk"
                     },
-                    "expiration_info": {
+                    "expiration": {
                         "type": "string",
-                        "description": "ChatGPT로부터 받은 유통기한 정보",
+                        "format": "date",
+                        "description": "ChatGPT로부터 받은 소비기한 정보 (YYYY-MM-DD 형식)",
+                        "example": "2025-01-20"
                     },
-                },
-                "example": {
-                    "food_name": "Milk",
-                    "expiration_info": "Milk typically lasts 7-10 days in the refrigerator after opening."
                 },
             },
             400: {
-                "description": "식품 이름이 제공되지 않았을 때",
+                "description": "필수 입력값이 누락된 경우",
                 "content": {
                     "application/json": {
                         "example": {"error": "Food name is required."}
@@ -431,6 +436,7 @@ class FoodExpirationQueryView(APIView):
         """
         # 클라이언트로부터 식품 이름 가져오기
         food_name = request.data.get('name')
+        purchase_date = request.data.get('purchase_date')
 
         if not food_name:
             return Response({"error": "Food name is required."}, status=400)
@@ -444,20 +450,18 @@ class FoodExpirationQueryView(APIView):
                         "role": "system",
                         "content": (
                             "당신은 식품 소비기한 전문가입니다. "
-                            "소비기한을 알려줄 때는 반드시 다음 형식으로만 답변하세요: "
-                            "'yyyy년 mm월 dd일까지 드시는 걸 추천해요!' "
-                            "어떠한 추가 정보도 포함하지 마세요."
+                            "소비기한을 계산하여 반드시 'YYYY-MM-DD' 형식으로만 답변하세요. "
+                            "어떠한 추가적인 문장이나 설명 없이 날짜만 출력하세요."
                         ),
                     },
                     {
                         "role": "user",
                         "content": f"""
-                            소비기한을 알려줄 때는 반드시 다음 형식으로만 답변하세요.
-                            {food_name}은 yyyy년 mm월 dd일까지 드시는 걸 추천해요!
+                            소비기한을 계산하여 'YYYY-MM-DD' 형식으로만 답변해주세요.
 
                             제품명: {food_name}
-                            제조일자: {today}
-                            소비기한을 위 형식으로 추천해주세요.
+                            제조일자: {purchase_date}
+                            소비기한을 계산해주세요.
                         """
                     }
                 ]
