@@ -81,6 +81,9 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'API documentation for 식기한 냉장고',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,  # Schema를 API 엔드포인트로 제공하지 않음
+    'SWAGGER_UI_SETTINGS': {
+        "persistAuthorization": True,  # ✅ 새로고침해도 인증 유지
+    },
     'TAGS': [
             {'name': 'Users', 'description': 'User management'},
             {'name': 'Refrigerators', 'description': 'Refrigerator management'},
