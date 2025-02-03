@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import json
 
 from dateutil.relativedelta import relativedelta
 from django.db.models import Sum
@@ -369,116 +370,6 @@ class FoodHistoryView(APIView):
         return Response({"error": "Invalid action."}, status=400)
 
 
-class FoodExpirationQueryView(APIView):
-    client = OpenAI(api_key=config("OPENAI_API_KEY"))  # 클라이언트 생성
-
-    @extend_schema(
-        summary="식품 소비기한 조회",
-        description="ChatGPT를 사용하여 특정 식품의 소비기한 정보를 YYYY-MM-DD 형식으로 반환합니다.",
-        tags=["Openai"],
-        request={
-            "application/json": {
-                "type": "object",
-                "properties": {
-                    "name": {
-                        "type": "string",
-                        "description": "조회할 식품의 이름",
-                        "example": "Milk"
-                    },
-                    "purchase_date": {
-                        "type": "string",
-                        "format": "date",
-                        "description": "제조일자 (YYYY-MM-DD 형식)",
-                        "example": "2025-02-02"
-                    }
-                },
-                "required": ["name", "purchase_date"],
-            }
-        },
-        responses={
-            200: {
-                "type": "object",
-                "properties": {
-                    "food_name": {
-                        "type": "string",
-                        "description": "조회된 식품 이름",
-                        "example": "Milk"
-                    },
-                    "expiration": {
-                        "type": "string",
-                        "format": "date",
-                        "description": "ChatGPT로부터 받은 소비기한 정보 (YYYY-MM-DD 형식)",
-                        "example": "2025-01-20"
-                    },
-                },
-            },
-            400: {
-                "description": "필수 입력값이 누락된 경우",
-                "content": {
-                    "application/json": {
-                        "example": {"error": "Food name is required."}
-                    }
-                },
-            },
-            500: {
-                "description": "ChatGPT API 호출 중 오류 발생",
-                "content": {
-                    "application/json": {
-                        "example": {"error": "Failed to fetch expiration info: API timeout"}
-                    }
-                },
-            },
-        },
-    )
-    def post(self, request):
-        """
-        ChatGPT를 사용하여 식품의 유통기한 정보를 가져오는 API
-        """
-        # 클라이언트로부터 식품 이름 가져오기
-        food_name = request.data.get('name')
-        purchase_date = request.data.get('purchase_date')
-
-        if not food_name:
-            return Response({"error": "Food name is required."}, status=400)
-
-        # ChatGPT API 호출
-        try:
-            completion = self.client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "당신은 식품 소비기한 전문가입니다. "
-                            "소비기한을 계산하여 반드시 'YYYY-MM-DD' 형식으로만 답변하세요. "
-                            "어떠한 추가적인 문장이나 설명 없이 날짜만 출력하세요."
-                        ),
-                    },
-                    {
-                        "role": "user",
-                        "content": f"""
-                            소비기한을 계산하여 'YYYY-MM-DD' 형식으로만 답변해주세요.
-
-                            제품명: {food_name}
-                            제조일자: {purchase_date}
-                            소비기한을 계산해주세요.
-                        """
-                    }
-                ]
-            )
-
-            # ChatGPT의 응답에서 유통기한 정보 추출
-            expiration = completion.choices[0].message.content
-
-            return Response({
-                "food_name": food_name,
-                "expiration": expiration
-            }, status=200)
-
-        except Exception as e:
-            return Response({"error": f"Failed to fetch expiration info: {str(e)}"}, status=500)
-
-
 class MonthlyTopConsumedFoodView(APIView):
     """
     월간 소비 식품 Top5
@@ -533,7 +424,6 @@ class MonthlyTopConsumedFoodView(APIView):
         }
 
         return Response(data, status=200)
-
 
 
 class MonthlyConsumptionRankingView(APIView):
@@ -688,3 +578,305 @@ class MonthlyConsumptionRankingView(APIView):
         }
 
         return Response(data, status=200)
+
+
+class FoodExpirationQueryView(APIView):
+
+    permission_classes = [IsAuthenticated]
+    client = OpenAI(api_key=config("OPENAI_API_KEY"))  # 클라이언트 생성
+
+    @extend_schema(
+        summary="식품 소비기한 조회",
+        description="ChatGPT를 사용하여 특정 식품의 소비기한 정보를 YYYY-MM-DD 형식으로 반환합니다.",
+        tags=["Openai"],
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "조회할 식품의 이름",
+                        "example": "Milk"
+                    },
+                    "purchase_date": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "제조일자 (YYYY-MM-DD 형식)",
+                        "example": "2025-02-02"
+                    }
+                },
+                "required": ["name", "purchase_date"],
+            }
+        },
+        responses={
+            200: {
+                "type": "object",
+                "properties": {
+                    "food_name": {
+                        "type": "string",
+                        "description": "조회된 식품 이름",
+                        "example": "Milk"
+                    },
+                    "expiration": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "ChatGPT로부터 받은 소비기한 정보 (YYYY-MM-DD 형식)",
+                        "example": "2025-01-20"
+                    },
+                },
+            },
+            400: {
+                "description": "필수 입력값이 누락된 경우",
+                "content": {
+                    "application/json": {
+                        "example": {"error": "Food name is required."}
+                    }
+                },
+            },
+            500: {
+                "description": "ChatGPT API 호출 중 오류 발생",
+                "content": {
+                    "application/json": {
+                        "example": {"error": "Failed to fetch expiration info: API timeout"}
+                    }
+                },
+            },
+        },
+    )
+    def post(self, request):
+        """
+        ChatGPT를 사용하여 식품의 유통기한 정보를 가져오는 API
+        """
+        # 클라이언트로부터 식품 이름 가져오기
+        food_name = request.data.get('name')
+        purchase_date = request.data.get('purchase_date')
+
+        if not food_name:
+            return Response({"error": "Food name is required."}, status=400)
+
+        # ChatGPT API 호출
+        try:
+            completion = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "당신은 식품 소비기한 전문가입니다. "
+                            "소비기한을 계산하여 반드시 'YYYY-MM-DD' 형식으로만 답변하세요. "
+                            "어떠한 추가적인 문장이나 설명 없이 날짜만 출력하세요."
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": f"""
+                            소비기한을 계산하여 'YYYY-MM-DD' 형식으로만 답변해주세요.
+
+                            제품명: {food_name}
+                            제조일자: {purchase_date}
+                            소비기한을 계산해주세요.
+                        """
+                    }
+                ]
+            )
+
+            # ChatGPT의 응답에서 유통기한 정보 추출
+            expiration = completion.choices[0].message.content
+
+            return Response({
+                "food_name": food_name,
+                "expiration": expiration
+            }, status=200)
+
+        except Exception as e:
+            return Response({"error": f"Failed to fetch expiration info: {str(e)}"}, status=500)
+
+
+class RecipeRecommendationView(APIView):
+    """레시피 추천 API"""
+    permission_classes = [IsAuthenticated]
+    client = OpenAI(api_key=config("OPENAI_API_KEY"))
+
+    def get_ingredients_info(self, refrigerator):
+        """냉장고의 재료 정보 조회 - 재료명만 추출"""
+        fridge_foods = (
+            FridgeFood.objects.filter(refrigerator=refrigerator)
+            .values_list('name', flat=True)
+            .distinct()
+        )
+        
+        # 냉장고 재료에서 None이나 빈 문자열 제거
+        valid_ingredients = {food for food in fridge_foods if food}
+        all_ingredients = valid_ingredients
+        
+        return all_ingredients
+
+    def check_available_ingredients(self, recipe_ingredients, available_ingredients):
+        """레시피 재료와 냉장고 재료를 매칭하여 있는/없는 재료 구분"""
+        recipe_ingredients_set = set(recipe_ingredients)
+        available = recipe_ingredients_set.intersection(available_ingredients)
+        missing = recipe_ingredients_set - available_ingredients
+
+        return list(available), list(missing)
+
+    @extend_schema(
+        summary="레시피 추천",
+        description="냉장고에 있는 재료를 기반으로 레시피를 추천합니다.",
+        tags=["Openai"],
+        parameters=[
+            OpenApiParameter(
+                name="refrigerator_id",
+                location=OpenApiParameter.PATH,
+                description="냉장고 ID",
+                required=True,
+                type=int,
+                examples=[
+                    OpenApiExample(
+                        name="냉장고 ID",
+                        value=3,
+                        description="레시피를 추천받을 냉장고 ID"
+                    )
+                ]
+            ),
+            OpenApiParameter(
+                name="main_ingredient",
+                location=OpenApiParameter.QUERY,
+                description="메인 재료",
+                required=True,
+                type=str,
+                examples=[
+                    OpenApiExample(
+                        name="메인 재료",
+                        value="소고기",
+                        description="레시피의 메인 재료"
+                    )
+                ]
+            ),
+        ],
+        responses={
+            200: OpenApiResponse(
+                description="레시피 추천 성공",
+                examples={
+                    "application/json": {
+                        "recipes": [
+                            {
+                                "title": "소고기 감자볶음",
+                                "total_ingredients": [
+                                    "소고기", "감자", "양파", "마늘", "소금", "후추", "식용유"
+                                ],
+                                "available_ingredients": [
+                                    "소고기", "감자", "양파", "마늘"
+                                ],
+                                "missing_ingredients": [],
+                                "cooking_steps": [
+                                    "1. 소고기는 핏물을 제거하고 적당한 크기로 썰어주세요.",
+                                    "2. 감자, 양파는 한입 크기로 썰어주세요.",
+                                    "3. 팬을 달군 후 소고기를 먼저 볶아주세요.",
+                                    "4. 감자, 양파를 넣고 함께 볶아주세요.",
+                                    "5. 마늘을 넣고 간을 맞춰주세요."
+                                ]
+                            }
+                        ]
+                    }
+                }
+            ),
+            400: OpenApiResponse(
+                description="잘못된 요청",
+                examples={
+                    "application/json": {
+                        "error": "Main ingredient is required."
+                    }
+                }
+            ),
+            403: OpenApiResponse(
+                description="접근 권한 없음",
+                examples={
+                    "application/json": {
+                        "error": "You do not have access to this refrigerator."
+                    }
+                }
+            ),
+            404: OpenApiResponse(
+                description="냉장고를 찾을 수 없음",
+                examples={
+                    "application/json": {
+                        "error": "Refrigerator not found."
+                    }
+                }
+            ),
+            500: OpenApiResponse(
+                description="서버 오류",
+                examples={
+                    "application/json": {
+                        "error": "Failed to get recipe recommendations: API error"
+                    }
+                }
+            )
+        }
+    )
+    def get(self, request, refrigerator_id):
+        refrigerator = get_object_or_404(Refrigerator, id=refrigerator_id)
+        if not refrigerator.access_list.filter(user=request.user).exists():
+            return Response({"error": "You do not have access to this refrigerator."}, status=403)
+
+        main_ingredient = request.query_params.get("main_ingredient")
+        if not main_ingredient:
+            return Response({"error": "Main ingredient is required."}, status=400)
+
+        available_ingredients = self.get_ingredients_info(refrigerator)
+        
+        try:
+            completion = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "당신은 요리 전문가입니다. "
+                            "주어진 재료로 만들 수 있는 요리 3개를 추천해주세요. "
+                            "재료의 양이나 수량은 언급하지 말고 재료명만 나열해주세요."
+                        )
+                    },
+                    {
+                        "role": "user",
+                        "content": (
+                            f"메인 재료 '{main_ingredient}'로 "
+                            f"만들 수 있는 요리 3개를 추천해주세요.\n"
+                            f"다음 JSON 형식으로 응답해주세요:\n"
+                            "{\n"
+                            "  'recipes': [\n"
+                            "    {\n"
+                            "      'title': '요리명',\n"
+                            "      'ingredients': ['재료1', '재료2', ...],\n"
+                            "      'cooking_steps': ['1. 첫번째 단계', '2. 두번째 단계', ...]\n"
+                            "    }\n"
+                            "  ]\n"
+                            "}"
+                        )
+                    }
+                ],
+                temperature=0.7,
+                max_tokens=1000,
+                response_format={ "type": "json_object" }
+            )
+
+            recipes_data = json.loads(completion.choices[0].message.content)
+            # 각 레시피에 대해 있는/없는 재료 구분
+            for recipe in recipes_data['recipes']:
+                available, missing = self.check_available_ingredients(
+                    recipe['ingredients'], 
+                    available_ingredients
+                )
+                recipe['available_ingredients'] = sorted(available)  # 정렬하여 보기 좋게
+                recipe['missing_ingredients'] = sorted(missing)      # 정렬하여 보기 좋게
+
+            return Response({
+                "main_ingredient": main_ingredient,
+                "recipes": recipes_data['recipes']
+            }, status=200)
+
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to get recipe recommendations: {str(e)}"}, 
+                status=500
+            )

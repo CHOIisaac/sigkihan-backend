@@ -2,7 +2,7 @@ from rest_framework.routers import DefaultRouter
 from django.urls import path
 
 from foods.views import DefaultFoodListView, FridgeFoodViewSet, FoodHistoryView, FoodExpirationQueryView, \
-    MonthlyTopConsumedFoodView, MonthlyConsumptionRankingView
+    MonthlyTopConsumedFoodView, MonthlyConsumptionRankingView, RecipeRecommendationView
 
 
 class NoSlashRouter(DefaultRouter):
@@ -23,7 +23,8 @@ urlpatterns = [
     path('refrigerators/<int:refrigerator_id>/foods', FridgeFoodViewSet.as_view({'get': 'list', 'post': 'create'}), name='fridge-food-list'),
     path('refrigerators/<int:refrigerator_id>/foods/<int:id>', FridgeFoodViewSet.as_view({'patch': 'partial_update', 'delete': 'destroy'}), name='fridge-food-detail'),
     path('refrigerators/<int:refrigerator_id>/foods/<int:id>/history', FoodHistoryView.as_view(), name='food-history'),
-    path('food/expiration-query/', FoodExpirationQueryView.as_view(), name='food-expiration-query'),
+    path('food/expiration-query', FoodExpirationQueryView.as_view(), name='food-expiration-query'),
+    path('refrigerators/<int:refrigerator_id>/recipes', RecipeRecommendationView.as_view(), name='recipe-recommendation'),
     path('refrigerators/<int:refrigerator_id>/statistics/monthly-top-consumed-foods',
         MonthlyTopConsumedFoodView.as_view(),
         name='monthly-top-consumed-foods'
