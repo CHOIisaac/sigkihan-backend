@@ -827,13 +827,13 @@ class RecipeRecommendationView(APIView):
         
         try:
             completion = self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-3.5-turbo",
                 messages=[
                     {
                         "role": "system",
                         "content": (
                             "당신은 요리 전문가입니다. "
-                            "주어진 재료로 만들 수 있는 요리 3개를 추천해주세요. "
+                            "주어진 재료로 만들 수 있는 요리 1개를 추천해주세요. "
                             "재료의 양이나 수량은 언급하지 말고 재료명만 나열해주세요."
                         )
                     },
@@ -841,7 +841,7 @@ class RecipeRecommendationView(APIView):
                         "role": "user",
                         "content": (
                             f"메인 재료 '{main_ingredient}'로 "
-                            f"만들 수 있는 요리 3개를 추천해주세요.\n"
+                            f"만들 수 있는 간단한 요리 1개를 추천해주세요.\n"
                             f"다음 JSON 형식으로 응답해주세요:\n"
                             "{\n"
                             "  'recipes': [\n"
@@ -867,8 +867,8 @@ class RecipeRecommendationView(APIView):
                     recipe['ingredients'], 
                     available_ingredients
                 )
-                recipe['available_ingredients'] = sorted(available)  # 정렬하여 보기 좋게
-                recipe['missing_ingredients'] = sorted(missing)      # 정렬하여 보기 좋게
+                recipe['available_ingredients'] = sorted(available)
+                recipe['missing_ingredients'] = sorted(missing)
 
             return Response({
                 "main_ingredient": main_ingredient,
