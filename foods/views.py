@@ -698,30 +698,24 @@ class RecipeRecommendationView(APIView):
     client = OpenAI(api_key=config("OPENAI_API_KEY"))
 
     def get_ingredients_info(self, refrigerator):
-        """냉장고의 재료 정보 조회 - 재료명만 추출"""
+        """냉장고의 재료 정보 조회"""
         fridge_foods = (
             FridgeFood.objects.filter(refrigerator=refrigerator)
             .values_list('name', flat=True)
             .distinct()
         )
-        
-        # 냉장고 재료에서 None이나 빈 문자열 제거
-        valid_ingredients = {food for food in fridge_foods if food}
-        all_ingredients = valid_ingredients
-        
-        return all_ingredients
+        return {food for food in fridge_foods if food}
 
     def check_available_ingredients(self, recipe_ingredients, available_ingredients):
         """레시피 재료와 냉장고 재료를 매칭하여 있는/없는 재료 구분"""
         recipe_ingredients_set = set(recipe_ingredients)
         available = recipe_ingredients_set.intersection(available_ingredients)
         missing = recipe_ingredients_set - available_ingredients
-
         return list(available), list(missing)
 
     @extend_schema(
         summary="레시피 추천",
-        description="냉장고에 있는 재료를 기반으로 레시피를 추천합니다.",
+        description="냉장고에 있는 재료들로 만들 수 있는 요리를 추천합니다.",
         tags=["Openai"],
         parameters=[
             OpenApiParameter(
@@ -729,29 +723,8 @@ class RecipeRecommendationView(APIView):
                 location=OpenApiParameter.PATH,
                 description="냉장고 ID",
                 required=True,
-                type=int,
-                examples=[
-                    OpenApiExample(
-                        name="냉장고 ID",
-                        value=3,
-                        description="레시피를 추천받을 냉장고 ID"
-                    )
-                ]
-            ),
-            OpenApiParameter(
-                name="main_ingredient",
-                location=OpenApiParameter.QUERY,
-                description="메인 재료",
-                required=True,
-                type=str,
-                examples=[
-                    OpenApiExample(
-                        name="메인 재료",
-                        value="소고기",
-                        description="레시피의 메인 재료"
-                    )
-                ]
-            ),
+                type=int
+            )
         ],
         responses={
             200: OpenApiResponse(
@@ -760,57 +733,27 @@ class RecipeRecommendationView(APIView):
                     "application/json": {
                         "recipes": [
                             {
-                                "title": "소고기 감자볶음",
-                                "total_ingredients": [
-                                    "소고기", "감자", "양파", "마늘", "소금", "후추", "식용유"
-                                ],
-                                "available_ingredients": [
-                                    "소고기", "감자", "양파", "마늘"
-                                ],
-                                "missing_ingredients": [],
+                                "title": "김치볶음밥",
+                                "ingredients": ["김치", "밥", "양파", "계란"],
                                 "cooking_steps": [
-                                    "1. 소고기는 핏물을 제거하고 적당한 크기로 썰어주세요.",
-                                    "2. 감자, 양파는 한입 크기로 썰어주세요.",
-                                    "3. 팬을 달군 후 소고기를 먼저 볶아주세요.",
-                                    "4. 감자, 양파를 넣고 함께 볶아주세요.",
-                                    "5. 마늘을 넣고 간을 맞춰주세요."
+                                    "1. 김치는 잘게 썰어주세요.",
+                                    "2. 양파도 잘게 썰어주세요.",
+                                    "3. 팬을 달군 후 김치를 볶아주세요.",
+                                    "4. 밥을 넣고 함께 볶아주세요.",
+                                    "5. 마지막으로 계란프라이를 올려주세요."
                                 ]
                             }
                         ]
                     }
                 }
             ),
-            400: OpenApiResponse(
-                description="잘못된 요청",
-                examples={
-                    "application/json": {
-                        "error": "Main ingredient is required."
-                    }
-                }
-            ),
             403: OpenApiResponse(
                 description="접근 권한 없음",
-                examples={
-                    "application/json": {
-                        "error": "You do not have access to this refrigerator."
-                    }
-                }
+                examples={"error": "You do not have access to this refrigerator."}
             ),
             404: OpenApiResponse(
                 description="냉장고를 찾을 수 없음",
-                examples={
-                    "application/json": {
-                        "error": "Refrigerator not found."
-                    }
-                }
-            ),
-            500: OpenApiResponse(
-                description="서버 오류",
-                examples={
-                    "application/json": {
-                        "error": "Failed to get recipe recommendations: API error"
-                    }
-                }
+                examples={"error": "Refrigerator not found."}
             )
         }
     )
@@ -819,11 +762,9 @@ class RecipeRecommendationView(APIView):
         if not refrigerator.access_list.filter(user=request.user).exists():
             return Response({"error": "You do not have access to this refrigerator."}, status=403)
 
-        main_ingredient = request.query_params.get("main_ingredient")
-        if not main_ingredient:
-            return Response({"error": "Main ingredient is required."}, status=400)
-
         available_ingredients = self.get_ingredients_info(refrigerator)
+        if not available_ingredients:
+            return Response({"error": "No ingredients found in refrigerator."}, status=404)
         
         try:
             completion = self.client.chat.completions.create(
@@ -833,21 +774,20 @@ class RecipeRecommendationView(APIView):
                         "role": "system",
                         "content": (
                             "당신은 요리 전문가입니다. "
-                            "주어진 재료로 만들 수 있는 요리 1개를 추천해주세요. "
-                            "재료의 양이나 수량은 언급하지 말고 재료명만 나열해주세요."
+                            "주어진 재료들로 만들 수 있는 간단한 요리 3개를 추천해주세요. "
                         )
                     },
                     {
                         "role": "user",
                         "content": (
-                            f"메인 재료 '{main_ingredient}'로 "
-                            f"만들 수 있는 간단한 요리 1개를 추천해주세요.\n"
+                            f"냉장고에 있는 다음 재료들을 활용해서 만들 수 있는 요리 3개를 추천해주세요.\n"
+                            f"재료 목록: {', '.join(sorted(available_ingredients))}\n\n"
                             f"다음 JSON 형식으로 응답해주세요:\n"
                             "{\n"
                             "  'recipes': [\n"
                             "    {\n"
                             "      'title': '요리명',\n"
-                            "      'ingredients': ['재료1', '재료2', ...],\n"
+                            "      'ingredients': ['필요한 재료1', '재료2', ...],\n"
                             "      'cooking_steps': ['1. 첫번째 단계', '2. 두번째 단계', ...]\n"
                             "    }\n"
                             "  ]\n"
@@ -861,6 +801,7 @@ class RecipeRecommendationView(APIView):
             )
 
             recipes_data = json.loads(completion.choices[0].message.content)
+            
             # 각 레시피에 대해 있는/없는 재료 구분
             for recipe in recipes_data['recipes']:
                 available, missing = self.check_available_ingredients(
@@ -871,7 +812,7 @@ class RecipeRecommendationView(APIView):
                 recipe['missing_ingredients'] = sorted(missing)
 
             return Response({
-                "main_ingredient": main_ingredient,
+                "refrigerator_ingredients": sorted(available_ingredients),
                 "recipes": recipes_data['recipes']
             }, status=200)
 
