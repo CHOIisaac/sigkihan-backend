@@ -581,83 +581,77 @@ class MonthlyConsumptionRankingView(APIView):
 
 
 class FoodExpirationQueryView(APIView):
-
     permission_classes = [IsAuthenticated]
-    client = OpenAI(api_key=config("OPENAI_API_KEY"))  # 클라이언트 생성
+    client = OpenAI(api_key=config("OPENAI_API_KEY"))
 
     @extend_schema(
         summary="식품 소비기한 조회",
         description="ChatGPT를 사용하여 특정 식품의 소비기한 정보를 YYYY-MM-DD 형식으로 반환합니다.",
         tags=["Openai"],
-        request={
-            "application/json": {
-                "type": "object",
-                "properties": {
-                    "name": {
-                        "type": "string",
-                        "description": "조회할 식품의 이름",
-                        "example": "Milk"
-                    },
-                    "purchase_date": {
-                        "type": "string",
-                        "format": "date",
-                        "description": "제조일자 (YYYY-MM-DD 형식)",
-                        "example": "2025-02-02"
-                    }
-                },
-                "required": ["name", "purchase_date"],
-            }
-        },
+        parameters=[
+            OpenApiParameter(
+                name="name",
+                location=OpenApiParameter.QUERY,
+                description="조회할 식품의 이름",
+                required=True,
+                type=str,
+                examples=[
+                    OpenApiExample(
+                        name="식품 이름",
+                        value="우유",
+                        description="조회할 식품의 이름"
+                    )
+                ]
+            ),
+            OpenApiParameter(
+                name="purchase_date",
+                location=OpenApiParameter.QUERY,
+                description="제조일자 (YYYY-MM-DD)",
+                required=True,
+                type=str,
+                examples=[
+                    OpenApiExample(
+                        name="제조일자",
+                        value="2025-02-08",
+                        description="식품의 제조일자"
+                    )
+                ]
+            ),
+        ],
         responses={
-            200: {
-                "type": "object",
-                "properties": {
-                    "food_name": {
-                        "type": "string",
-                        "description": "조회된 식품 이름",
-                        "example": "Milk"
-                    },
-                    "expiration": {
-                        "type": "string",
-                        "format": "date",
-                        "description": "ChatGPT로부터 받은 소비기한 정보 (YYYY-MM-DD 형식)",
-                        "example": "2025-01-20"
-                    },
-                },
-            },
-            400: {
-                "description": "필수 입력값이 누락된 경우",
-                "content": {
+            200: OpenApiResponse(
+                description="소비기한 조회 성공",
+                examples={
                     "application/json": {
-                        "example": {"error": "Food name is required."}
+                        "food_name": "우유",
+                        "expiration": "2024-03-22"
                     }
-                },
-            },
-            500: {
-                "description": "ChatGPT API 호출 중 오류 발생",
-                "content": {
-                    "application/json": {
-                        "example": {"error": "Failed to fetch expiration info: API timeout"}
-                    }
-                },
-            },
-        },
+                }
+            ),
+            400: OpenApiResponse(
+                description="잘못된 요청",
+                examples={"error": "Food name and purchase date are required."}
+            ),
+            500: OpenApiResponse(
+                description="서버 오류",
+                examples={"error": "Failed to fetch expiration info: API error"}
+            )
+        }
     )
-    def post(self, request):
-        """
-        ChatGPT를 사용하여 식품의 유통기한 정보를 가져오는 API
-        """
-        # 클라이언트로부터 식품 이름 가져오기
-        food_name = request.data.get('name')
-        purchase_date = request.data.get('purchase_date')
+    def get(self, request):
+        """식품의 소비기한 정보를 조회하는 API"""
+        food_name = request.query_params.get('name')
+        purchase_date = request.query_params.get('purchase_date')
 
-        if not food_name:
-            return Response({"error": "Food name is required."}, status=400)
+        if not food_name or not purchase_date:
+            return Response(
+                {"error": "Food name and purchase date are required."}, 
+                status=400
+            )
 
-        # ChatGPT API 호출
         try:
             completion = self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-3.5-turbo",  # 더 빠른 응답을 위해 3.5-turbo 사용
                 messages=[
                     {
                         "role": "system",
@@ -669,19 +663,16 @@ class FoodExpirationQueryView(APIView):
                     },
                     {
                         "role": "user",
-                        "content": f"""
-                            소비기한을 계산하여 'YYYY-MM-DD' 형식으로만 답변해주세요.
-
-                            제품명: {food_name}
-                            제조일자: {purchase_date}
-                            소비기한을 계산해주세요.
-                        """
+                        "content": (
+                            f"다음 식품의 소비기한을 'YYYY-MM-DD' 형식으로만 답변해주세요.\n"
+                            f"제품명: {food_name}\n"
+                            f"제조일자: {purchase_date}"
+                        )
                     }
                 ]
             )
 
-            # ChatGPT의 응답에서 유통기한 정보 추출
-            expiration = completion.choices[0].message.content
+            expiration = completion.choices[0].message.content.strip()
 
             return Response({
                 "food_name": food_name,
@@ -689,7 +680,10 @@ class FoodExpirationQueryView(APIView):
             }, status=200)
 
         except Exception as e:
-            return Response({"error": f"Failed to fetch expiration info: {str(e)}"}, status=500)
+            return Response(
+                {"error": f"Failed to fetch expiration info: {str(e)}"}, 
+                status=500
+            )
 
 
 class RecipeRecommendationView(APIView):
