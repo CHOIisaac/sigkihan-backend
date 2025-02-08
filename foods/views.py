@@ -617,6 +617,20 @@ class FoodExpirationQueryView(APIView):
                     )
                 ]
             ),
+            OpenApiParameter(
+                name="storage_type",
+                location=OpenApiParameter.QUERY,
+                description="보관 방법 (냉장/냉동/실온)",
+                required=True,
+                type=str,
+                examples=[
+                    OpenApiExample(
+                        name="보관 방법",
+                        value="냉장",
+                        description="식품의 보관 방법"
+                    )
+                ]
+            )
         ],
         responses={
             200: OpenApiResponse(
@@ -624,13 +638,14 @@ class FoodExpirationQueryView(APIView):
                 examples={
                     "application/json": {
                         "food_name": "우유",
-                        "expiration": "2024-03-22"
+                        "storage_type": "냉장",
+                        "expiration": "2025-02-08"
                     }
                 }
             ),
             400: OpenApiResponse(
                 description="잘못된 요청",
-                examples={"error": "Food name and purchase date are required."}
+                examples={"error": "Food name, purchase date, and storage type are required."}
             ),
             500: OpenApiResponse(
                 description="서버 오류",
@@ -642,22 +657,24 @@ class FoodExpirationQueryView(APIView):
         """식품의 소비기한 정보를 조회하는 API"""
         food_name = request.query_params.get('name')
         purchase_date = request.query_params.get('purchase_date')
+        storage_type = request.query_params.get('storage_type')
 
-        if not food_name or not purchase_date:
+        if not all([food_name, purchase_date, storage_type]):
             return Response(
-                {"error": "Food name and purchase date are required."}, 
+                {"error": "Food name, purchase date, and storage type are required."}, 
                 status=400
             )
 
         try:
             completion = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",  # 더 빠른 응답을 위해 3.5-turbo 사용
+                model="gpt-3.5-turbo",
                 messages=[
                     {
                         "role": "system",
                         "content": (
                             "당신은 식품 소비기한 전문가입니다. "
-                            "소비기한을 계산하여 반드시 'YYYY-MM-DD' 형식으로만 답변하세요. "
+                            "식품의 이름, 제조일자, 보관 방법을 고려하여 소비기한을 계산해주세요. "
+                            "반드시 'YYYY-MM-DD' 형식으로만 답변하고, "
                             "어떠한 추가적인 문장이나 설명 없이 날짜만 출력하세요."
                         ),
                     },
@@ -666,7 +683,8 @@ class FoodExpirationQueryView(APIView):
                         "content": (
                             f"다음 식품의 소비기한을 'YYYY-MM-DD' 형식으로만 답변해주세요.\n"
                             f"제품명: {food_name}\n"
-                            f"제조일자: {purchase_date}"
+                            f"제조일자: {purchase_date}\n"
+                            f"보관방법: {storage_type}"
                         )
                     }
                 ]
@@ -676,6 +694,7 @@ class FoodExpirationQueryView(APIView):
 
             return Response({
                 "food_name": food_name,
+                "storage_type": storage_type,
                 "expiration": expiration
             }, status=200)
 
@@ -709,15 +728,22 @@ class RecipeRecommendationView(APIView):
 
     @extend_schema(
         summary="레시피 추천",
-        description="냉장고에 있는 재료들로 만들 수 있는 요리를 추천합니다.",
+        description="주어진 재료들로 만들 수 있는 요리를 추천합니다.",
         tags=["Openai"],
         parameters=[
             OpenApiParameter(
-                name="refrigerator_id",
-                location=OpenApiParameter.PATH,
-                description="냉장고 ID",
+                name="ingredients",
+                location=OpenApiParameter.QUERY,
+                description="요리에 사용할 재료들 (쉼표로 구분)",
                 required=True,
-                type=int
+                type=str,
+                examples=[
+                    OpenApiExample(
+                        name="재료 목록",
+                        value="김치,달걀,양파",
+                        description="쉼표로 구분된 재료 목록"
+                    )
+                ]
             )
         ],
         responses={
@@ -725,41 +751,49 @@ class RecipeRecommendationView(APIView):
                 description="레시피 추천 성공",
                 examples={
                     "application/json": {
+                        "ingredients": ["김치", "달걀", "양파"],
                         "recipes": [
                             {
-                                "title": "김치볶음밥",
-                                "ingredients": ["김치", "밥", "양파", "계란"],
+                                "title": "김치 달걀말이",
+                                "difficulty": "하",
+                                "ingredients": ["김치", "달걀", "양파"],
+                                "cooking_time": "15분",
                                 "cooking_steps": [
-                                    "1. 김치는 잘게 썰어주세요.",
-                                    "2. 양파도 잘게 썰어주세요.",
-                                    "3. 팬을 달군 후 김치를 볶아주세요.",
-                                    "4. 밥을 넣고 함께 볶아주세요.",
-                                    "5. 마지막으로 계란프라이를 올려주세요."
-                                ]
+                                    "1. 재료 준비: 김치는 잘게 썰고, 양파는 곱게 다져주세요.",
+                                    "2. 달걀 풀기: 달걀을 그릇에 풀어 소금 약간을 넣고 섞어주세요.",
+                                    "3. 팬 예열: 중불로 팬을 달군 후 식용유를 두르세요.",
+                                    "4. 조리 과정: 달걀물을 부어 익히다가 김치와 양파를 넣고 말아주세요.",
+                                    "5. 마무리: 적당한 크기로 썰어 완성합니다."
+                                ],
+                                "cooking_tips": [
+                                    "달걀은 너무 세게 풀지 않는 것이 좋습니다.",
+                                    "김치는 물기를 꼭 빼고 사용하세요."
+                                ],
+                                "storage_method": "당일 섭취 권장"
                             }
                         ]
                     }
                 }
             ),
-            403: OpenApiResponse(
-                description="접근 권한 없음",
-                examples={"error": "You do not have access to this refrigerator."}
+            400: OpenApiResponse(
+                description="잘못된 요청",
+                examples={"error": "Ingredients are required."}
             ),
-            404: OpenApiResponse(
-                description="냉장고를 찾을 수 없음",
-                examples={"error": "Refrigerator not found."}
+            500: OpenApiResponse(
+                description="서버 오류",
+                examples={"error": "Failed to get recipe recommendations: API error"}
             )
         }
     )
-    def get(self, request, refrigerator_id):
-        refrigerator = get_object_or_404(Refrigerator, id=refrigerator_id)
-        if not refrigerator.access_list.filter(user=request.user).exists():
-            return Response({"error": "You do not have access to this refrigerator."}, status=403)
+    def get(self, request):
+        ingredients = request.query_params.get('ingredients')
 
-        available_ingredients = self.get_ingredients_info(refrigerator)
-        if not available_ingredients:
-            return Response({"error": "No ingredients found in refrigerator."}, status=404)
-        
+        if not ingredients:
+            return Response(
+                {"error": "Ingredients are required."}, 
+                status=400
+            )
+
         try:
             completion = self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
@@ -781,8 +815,8 @@ class RecipeRecommendationView(APIView):
                     {
                         "role": "user",
                         "content": (
-                            f"냉장고에 있는 다음 재료들을 활용해서 만들 수 있는 요리 3개를 추천해주세요.\n"
-                            f"재료 목록: {', '.join(sorted(available_ingredients))}\n\n"
+                            f"주어진 재료들을 활용해서 만들 수 있는 요리 3개를 추천해주세요.\n"
+                            f"재료 목록: {', '.join(sorted(ingredients.split(',')))}\n\n"
                             f"다음 JSON 형식으로 응답해주세요:\n"
                             "{\n"
                             "  'recipes': [\n"
@@ -818,13 +852,13 @@ class RecipeRecommendationView(APIView):
             for recipe in recipes_data['recipes']:
                 available, missing = self.check_available_ingredients(
                     recipe['ingredients'], 
-                    available_ingredients
+                    ingredients.split(',')
                 )
                 recipe['available_ingredients'] = sorted(available)
                 recipe['missing_ingredients'] = sorted(missing)
 
             return Response({
-                "refrigerator_ingredients": sorted(available_ingredients),
+                "ingredients": sorted(ingredients.split(',')),
                 "recipes": recipes_data['recipes']
             }, status=200)
 
