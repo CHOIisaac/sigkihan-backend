@@ -27,7 +27,7 @@ urlpatterns = [
         FoodExpirationQueryView.as_view(), 
         name='food-expiration'
     ),
-    path('refrigerators/<int:refrigerator_id>/recipes', RecipeRecommendationView.as_view(), name='recipe-recommendation'),
+    path('refrigerators/<int:refrigerator_id>/foods/recipes', RecipeRecommendationView.as_view(), name='recipe-recommendation'),
     path('refrigerators/<int:refrigerator_id>/statistics/monthly-top-consumed-foods',
         MonthlyTopConsumedFoodView.as_view(),
         name='monthly-top-consumed-foods'
