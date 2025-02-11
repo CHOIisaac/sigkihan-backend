@@ -244,6 +244,12 @@ class FridgeFoodViewSet(viewsets.ViewSet):
                 "type": "object",
                 "properties": {
                     "name": {"type": "string", "example": "수박", "description": "사용자 정의 음식 이름"},
+                    "storage_type": {
+                        "type": "string",
+                        "enum": ["refrigerated", "frozen", "room_temp"],
+                        "example": "refrigerated",
+                        "description": "음식 보관 방식 (냉장, 냉동, 실온)"
+                    },
                     "purchase_date": {"type": "string", "format": "date", "example": "2024-12-01", "description": "구매 날짜"},
                     "expiration_date": {"type": "string", "format": "date", "example": "2024-12-10", "description": "소비기한"},
                     "quantity": {"type": "integer", "example": 2, "description": "수량"}
@@ -262,10 +268,12 @@ class FridgeFoodViewSet(viewsets.ViewSet):
 
         if food.default_food.id == 30:
             food.name = request.data.get('name', food.name)
+            food.storage_type = request.data.get('storage_type')
             food.purchase_date = request.data.get('purchase_date', food.purchase_date)
             food.expiration_date = request.data.get('expiration_date', food.expiration_date)
             food.quantity = request.data.get('quantity', food.quantity)
         else:
+            food.storage_type = request.data.get('storage_type')
             food.purchase_date = request.data.get('purchase_date', food.purchase_date)
             food.expiration_date = request.data.get('expiration_date', food.expiration_date)
             food.quantity = request.data.get('quantity', food.quantity)
