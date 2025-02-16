@@ -735,23 +735,16 @@ class RecipeRecommendationView(APIView):
         return list(available), list(missing)
 
     @extend_schema(
-        summary="레시피 추천",
-        description="주어진 재료들로 만들 수 있는 요리를 추천합니다.",
+        summary="냉장고 재료 기반 레시피 추천",
+        description="냉장고에 있는 재료들로 만들 수 있는 요리를 추천합니다.",
         tags=["Openai"],
         parameters=[
             OpenApiParameter(
-                name="ingredients",
-                location=OpenApiParameter.QUERY,
-                description="요리에 사용할 재료들 (쉼표로 구분)",
+                name="refrigerator_id",
+                location=OpenApiParameter.PATH,
+                description="냉장고 ID",
                 required=True,
-                type=str,
-                examples=[
-                    OpenApiExample(
-                        name="재료 목록",
-                        value="김치,달걀,양파",
-                        description="쉼표로 구분된 재료 목록"
-                    )
-                ]
+                type=int
             )
         ],
         responses={
@@ -759,48 +752,44 @@ class RecipeRecommendationView(APIView):
                 description="레시피 추천 성공",
                 examples={
                     "application/json": {
-                        "ingredients": ["김치", "달걀", "양파"],
+                        "refrigerator_ingredients": ["김치", "달걀", "양파"],
                         "recipes": [
                             {
                                 "title": "김치 달걀말이",
                                 "difficulty": "하",
                                 "ingredients": ["김치", "달걀", "양파"],
                                 "cooking_time": "15분",
-                                "cooking_steps": [
-                                    "1. 재료 준비: 김치는 잘게 썰고, 양파는 곱게 다져주세요.",
-                                    "2. 달걀 풀기: 달걀을 그릇에 풀어 소금 약간을 넣고 섞어주세요.",
-                                    "3. 팬 예열: 중불로 팬을 달군 후 식용유를 두르세요.",
-                                    "4. 조리 과정: 달걀물을 부어 익히다가 김치와 양파를 넣고 말아주세요.",
-                                    "5. 마무리: 적당한 크기로 썰어 완성합니다."
-                                ],
-                                "cooking_tips": [
-                                    "달걀은 너무 세게 풀지 않는 것이 좋습니다.",
-                                    "김치는 물기를 꼭 빼고 사용하세요."
-                                ],
-                                "storage_method": "당일 섭취 권장"
+                                "cooking_steps": ["..."],
+                                "cooking_tips": ["..."],
+                                "storage_method": "당일 섭취 권장",
+                                "available_ingredients": ["김치", "달걀", "양파"],
+                                "missing_ingredients": []
                             }
                         ]
                     }
                 }
             ),
-            400: OpenApiResponse(
-                description="잘못된 요청",
-                examples={"error": "Ingredients are required."}
+            403: OpenApiResponse(
+                description="접근 권한 없음",
+                examples={"error": "You do not have access to this refrigerator."}
             ),
-            500: OpenApiResponse(
-                description="서버 오류",
-                examples={"error": "Failed to get recipe recommendations: API error"}
+            404: OpenApiResponse(
+                description="재료 없음",
+                examples={"error": "No ingredients found in refrigerator."}
             )
         }
     )
-    def get(self, request):
-        ingredients = request.query_params.get('ingredients')
+    def get(self, request, refrigerator_id):
+        """냉장고 재료 기반 레시피 추천"""
+        # 냉장고 접근 권한 확인
+        refrigerator = get_object_or_404(Refrigerator, id=refrigerator_id)
+        if not refrigerator.access_list.filter(user=request.user).exists():
+            return Response({"error": "You do not have access to this refrigerator."}, status=403)
 
-        if not ingredients:
-            return Response(
-                {"error": "Ingredients are required."}, 
-                status=400
-            )
+        # 냉장고 재료 조회
+        available_ingredients = self.get_ingredients_info(refrigerator)
+        if not available_ingredients:
+            return Response({"error": "No ingredients found in refrigerator."}, status=404)
 
         try:
             completion = self.client.chat.completions.create(
@@ -813,33 +802,35 @@ class RecipeRecommendationView(APIView):
                             "각 요리의 난이도를 '상', '중', '하' 중 하나로 표시해주세요. "
                             "조리 과정은 다음과 같은 내용을 포함해야 합니다:\n"
                             "1. 재료 손질 방법 (크기, 모양 등 구체적으로)\n"
-                            "2. 필요한 도구와 준비물\n"
-                            "3. 불 세기와 조리 시간\n"
-                            "4. 양념이나 소스의 비율\n"
-                            "5. 각 단계별 주의사항과 팁\n"
-                            "모든 설명은 초보자도 이해할 수 있게 최대한 자세하게 작성해주세요."
+                            "2. 불 세기와 조리 시간\n"
+                            "3. 각 단계별 주의사항과 팁\n"
+                            "4. 정확한 양념 비율\n"
+                            "모든 설명은 초보자도 이해할 수 있게 최대한 자세하게 작성해주세요.\n"
+                            "※ 양념과 조미료도 모두 재료 목록에 포함시켜주세요."
                         )
                     },
                     {
                         "role": "user",
                         "content": (
-                            f"주어진 재료들을 활용해서 만들 수 있는 요리 3개를 추천해주세요.\n"
-                            f"재료 목록: {', '.join(sorted(ingredients.split(',')))}\n\n"
+                            f"냉장고에 있는 다음 재료들을 활용해서 만들 수 있는 요리 3개를 추천해주세요.\n"
+                            f"재료 목록: {', '.join(sorted(available_ingredients))}\n\n"
                             f"다음 JSON 형식으로 응답해주세요:\n"
                             "{\n"
                             "  'recipes': [\n"
                             "    {\n"
                             "      'title': '요리명',\n"
                             "      'difficulty': '난이도(상/중/하)',\n"
-                            "      'ingredients': ['필요한 재료1', '재료2', ...],\n"
+                            "      'ingredients': [\n"
+                            "        '주재료1', '주재료2', ...,\n"
+                            "        '소금', '설탕', '간장', '고추장', '참기름' 등 필요한 모든 양념\n"
+                            "      ],\n"
                             "      'cooking_time': '조리 시간',\n"
                             "      'cooking_steps': [\n"
-                            "        '1. 구체적인 손질 방법, 크기, 모양 설명...',\n"
-                            "        '2. 필요한 도구와 준비물 설명...',\n"
-                            "        '3. 정확한 비율과 만드는 방법...',\n"
-                            "        '4. 불 세기, 시간, 순서 등 상세 설명...',\n"
-                            "        '5. 맛있게 만들기 위한 노하우...',\n"
-                            "        '6. 요리에 대한 간맞춤, 플레이팅...'\n"
+                            "        '1. 재료 손질: 구체적인 손질 방법...',\n"
+                            "        '2. 양념 준비: 정확한 양념 비율...',\n"
+                            "        '3. 조리 과정: 불 조절과 시간...',\n"
+                            "        '4. 간 맞추기: 간장 1큰술, 소금 1/2작은술...',\n"
+                            "        '5. 마무리: 참기름 1작은술...'\n"
                             "      ],\n"
                             "      'cooking_tips': ['팁1', '팁2', ...],\n"
                             "      'storage_method': '보관 방법'\n"
@@ -850,7 +841,7 @@ class RecipeRecommendationView(APIView):
                     }
                 ],
                 temperature=0.7,
-                max_tokens=3000,  # 토큰 수 더 증가
+                max_tokens=3000,
                 response_format={ "type": "json_object" }
             )
 
@@ -859,14 +850,14 @@ class RecipeRecommendationView(APIView):
             # 각 레시피에 대해 있는/없는 재료 구분
             for recipe in recipes_data['recipes']:
                 available, missing = self.check_available_ingredients(
-                    recipe['ingredients'], 
-                    ingredients.split(',')
+                    recipe['ingredients'],
+                    available_ingredients
                 )
                 recipe['available_ingredients'] = sorted(available)
                 recipe['missing_ingredients'] = sorted(missing)
 
             return Response({
-                "ingredients": sorted(ingredients.split(',')),
+                "refrigerator_ingredients": sorted(available_ingredients),
                 "recipes": recipes_data['recipes']
             }, status=200)
 
