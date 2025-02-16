@@ -14,6 +14,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import viewsets
+from django.core.cache import cache
 
 from refriges.models import Refrigerator, RefrigeratorAccess
 from sigkihan import settings
@@ -591,6 +592,11 @@ class MonthlyConsumptionRankingView(APIView):
 class FoodExpirationQueryView(APIView):
     permission_classes = [IsAuthenticated]
     client = OpenAI(api_key=config("OPENAI_API_KEY"))
+    CACHE_TIMEOUT = 60 * 5  # 5분간 캐시 유지
+
+    def get_cache_key(self, food_name, purchase_date, storage_type):
+        """캐시 키 생성"""
+        return f"food_expiration:{food_name}:{purchase_date}:{storage_type}"
 
     @extend_schema(
         summary="식품 소비기한 조회",
@@ -662,7 +668,6 @@ class FoodExpirationQueryView(APIView):
         }
     )
     def get(self, request):
-        """식품의 소비기한 정보를 조회하는 API"""
         food_name = request.query_params.get('name')
         purchase_date = request.query_params.get('purchase_date')
         storage_type = request.query_params.get('storage_type')
@@ -672,6 +677,14 @@ class FoodExpirationQueryView(APIView):
                 {"error": "Food name, purchase date, and storage type are required."}, 
                 status=400
             )
+
+        # 캐시 키 생성
+        cache_key = self.get_cache_key(food_name, purchase_date, storage_type)
+        
+        # 캐시에서 데이터 조회
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return Response(cached_data, status=200)
 
         try:
             completion = self.client.chat.completions.create(
@@ -695,16 +708,22 @@ class FoodExpirationQueryView(APIView):
                             f"보관방법: {storage_type}"
                         )
                     }
-                ]
+                ],
+                temperature=0.0  # 일관된 응답을 위해 0으로 설정
             )
 
             expiration = completion.choices[0].message.content.strip()
 
-            return Response({
+            response_data = {
                 "food_name": food_name,
                 "storage_type": storage_type,
                 "expiration": expiration
-            }, status=200)
+            }
+
+            # 응답 데이터를 캐시에 저장
+            cache.set(cache_key, response_data, self.CACHE_TIMEOUT)
+
+            return Response(response_data, status=200)
 
         except Exception as e:
             return Response(
