@@ -1,15 +1,12 @@
-from django.http import Http404
-from rest_framework.generics import GenericAPIView, get_object_or_404
+from rest_framework.generics import GenericAPIView
 from rest_framework.mixins import ListModelMixin, RetrieveModelMixin, UpdateModelMixin, DestroyModelMixin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema
-from rest_framework import viewsets, status
-from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
 from .models import CustomUser, ProfileImage
-from .serializers import TestRequestSerializer, UserSerializer, ProfileImageSerializer, UserDetailSerializer, UserUpdateSerializer
+from .serializers import TestRequestSerializer, ProfileImageSerializer, UserDetailSerializer, UserUpdateSerializer
 
 
 class TestAPIView(GenericAPIView):
